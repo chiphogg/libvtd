@@ -1,11 +1,15 @@
 import contextlib
+import datetime
 import os
 import re
 import tempfile
 import unittest
 
-################################################################################
+import libvtd.trusted_system
+
+###############################################################################
 # Helper functions
+
 
 @contextlib.contextmanager
 def TempInput(data):
@@ -14,6 +18,7 @@ def TempInput(data):
     temp.close()
     yield temp.name
     os.unlink(temp.name)
+
 
 def FirstTextMatch(node_list, search_regex):
     """Find the first Node in node_list which matches search_regex.
@@ -32,54 +37,90 @@ def FirstTextMatch(node_list, search_regex):
             return node
     return None
 
-################################################################################
+###############################################################################
 # Test code
+
+
+class TestParsing(unittest.TestCase):
+    """Test the parsing of individual items."""
+
+    def testParseSimpleSection(self):
+        """Parse a line corresponding to a section"""
+        section = libvtd.trusted_system.ParseNode('= A section =')
+        self.assertEqual('A section', section.text)
+        self.assertEqual(1, section.level)
+
+    def testParseSectionWithAttributes(self):
+        """Parse a section with default priority and contexts."""
+        section = libvtd.trusted_system.ParseNode('== @@Home @p:3 relaxing ==')
+        self.assertEqual('Home relaxing', section.text)
+        self.assertEqual(2, section.level)
+        self.assertItemsEqual(['home'], section.contexts)
+        self.assertEqual(3, section.priority)
+
+    def testParseNextAction(self):
+        action = libvtd.trusted_system.ParseNode(
+            '  @ @p:1 @@Read @t:15 chapter 8 >2013-06-28 13:00 '
+            '@home <2013-07-05 22:30')
+        self.assertEqual('NextAction', action.__class__.__name__)
+        self.assertEqual('Read chapter 8', action.text)
+        self.assertItemsEqual(['read', 'home'], action.contexts)
+        self.assertEqual(datetime.datetime(2013, 6, 28, 13),
+                         action.visible_date)
+        self.assertEqual(datetime.datetime(2013, 7, 5, 22, 30),
+                         action.due_date)
+        self.assertEqual(2, action.indent)
+        self.assertEqual(1, action.priority)
+        self.assertEqual(15, action.minutes)
+
 
 class TestTrustedSystemBaseClass(unittest.TestCase):
 
     def setUp(self):
-        self.trusted_system = TrustedSystem()
+        self.trusted_system = libvtd.trusted_system.TrustedSystem()
 
     def addAnonymousFile(self, data):
         with TempInput(data) as file_name:
             self.trusted_system.AddFile(file_name)
 
+
 class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
     def testInheritContext(self):
         self.addAnonymousFile(
-                "@test"
-                ""
-                "@ Top-level action"
-                "- Project"
-                "  @ Inherited action"
-                "- Project which cancels context @!test @x"
-                "  @ Action which should show up only under 'x'"
-                )
+            "@test"
+            ""
+            "@ Top-level action"
+            "- Project"
+            "  @ Inherited action"
+            "- Project which cancels context @!test @x"
+            "  @ Action which should show up only under 'x'"
+        )
         # Check @test actions
-        next_actions = self.trusted_system.NextActions(contexts = ['test'])
+        next_actions = self.trusted_system.NextActions(contexts=['test'])
         self.assertItemsEqual(['Top-level action', 'Inherited action'],
                               [x.text for x in next_actions])
         # Check @x actions
-        next_actions = self.trusted_system.NextActions(contexts = ['x'])
+        next_actions = self.trusted_system.NextActions(contexts=['x'])
         self.assertItemsEqual(["Action which should show up only under 'x'"],
                               [x.text for x in next_actions])
         # Get the actions; check their priorities... somehow!
 
     def testInheritPriority(self):
         self.addAnonymousFile(
-                "@p:4 @test"
-                ""
-                "@ Priority 4 task"
-                "- Unordered Project @p:2"
-                "  @ Priority 2 task"
-                "  @ Priority 0 task @p:0"
-                )
-        next_actions = self.trusted_system.NextActions(contexts = ['test'])
+            "@p:4 @test"
+            ""
+            "@ Priority 4 task"
+            "- Unordered Project @p:2"
+            "  @ Priority 2 task"
+            "  @ Priority 0 task @p:0"
+        )
+        next_actions = self.trusted_system.NextActions(contexts=['test'])
         self.assertEqual(3, len(next_actions))
-        self.assertEqual(0, FirstTextMatch(next_actions, "Priority 0").priority)
-        self.assertEqual(2, FirstTextMatch(next_actions, "Priority 2").priority)
-        self.assertEqual(4, FirstTextMatch(next_actions, "Priority 4").priority)
+        self.assertEqual(0, FirstTextMatch(next_actions, "Pri.*0").priority)
+        self.assertEqual(2, FirstTextMatch(next_actions, "Pri.*2").priority)
+        self.assertEqual(4, FirstTextMatch(next_actions, "Pri.*4").priority)
         # Get the actions; check their priorities... somehow!
+
 
 class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
     """Test "paranoia" features.
@@ -102,7 +143,7 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
             ""
             "# Project WITH next action"
             "  @ Next action"
-            )
+        )
         projects = self.trusted_system.ProjectsWithoutNextActions()
         self.assertEqual(2, len(projects))
         self.assertItemsEqual(['Ordered project.', 'Empty project.'],
@@ -127,12 +168,8 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
             ""
             "# Project with implicit context."
             "  @ Also should not show up"
-            next_actions = self.trusted_system.NextActionsWithoutContexts()
-            self.assertEqual(1, len(next_actions))
-            self.assertItemsEqual(['Should show up'],
-                                  [x.text for x in next_actions])
-
-
-
-
-
+        )
+        next_actions = self.trusted_system.NextActionsWithoutContexts()
+        self.assertEqual(1, len(next_actions))
+        self.assertItemsEqual(['Should show up'],
+                              [x.text for x in next_actions])

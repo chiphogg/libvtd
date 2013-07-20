@@ -1,51 +1,192 @@
+import copy
+import datetime
 import unittest
 
 import libvtd.node
 
 
-class TestNodeNesting(unittest.TestCase):
+class TestNode(unittest.TestCase):
     """Test various "node" types (Project, Next Action, Comment, etc.)"""
 
-    def setUp(self):
-        self.section = libvtd.node.Section()
-        self.project = libvtd.node.Project()
-        self.next_action = libvtd.node.NextAction()
-        self.comment = libvtd.node.Comment()
+    def testParsingDueDates(self):
+        """ Check that valid due dates get parsed, and invalid ones remain."""
+        n = libvtd.node.NextAction()
+        n.AbsorbText('Test VTD <2013-06-31 <2013-06-29 18:59')
 
-    def testSanityOfReferences(self):
-        """Not sure how variables and objects in python work.
+        # The invalid date June 31 should remain in the text.
+        self.assertEqual('Test VTD <2013-06-31', n.text)
 
-        Try getting at a variable by changing its child's parent.
-        """
-        self.assertTrue(self.project.AddChild(self.next_action))
-        test_string = 'Just some random string'
-        self.project.children[0].parent.text = test_string
-        self.assertTrue(self.project.text == test_string)
+        # The valid datetime should have been parsed as the due date.
+        self.assertEqual(datetime.datetime(2013, 6, 29, 18, 59), n.due_date)
+
+    def testNestingUnderFile(self):
+        """Check that any non-File Node can be nested under a File."""
+        f = libvtd.node.File()
+        self.assertFalse(f.AddChild(libvtd.node.File()))
+        self.assertTrue(f.AddChild(libvtd.node.Section()))
+        self.assertTrue(f.AddChild(libvtd.node.Project()))
+        self.assertTrue(f.AddChild(libvtd.node.NextAction()))
+        self.assertTrue(f.AddChild(libvtd.node.Comment()))
 
     def testNestingUnderSection(self):
-        """Check that any type of node can be nested under a Section."""
-        self.assertTrue(self.section.AddChild(libvtd.node.Section()))
-        self.assertTrue(self.section.AddChild(self.project))
-        self.assertTrue(self.section.AddChild(self.next_action))
-        self.assertTrue(self.section.AddChild(self.comment))
+        """Check that any non-File node can be nested under a Section."""
+        s = libvtd.node.Section()
+
+        # File can never nest under Section.
+        self.assertFalse(s.AddChild(libvtd.node.File()))
+
+        # Section can only be added if it's of a higher level.
+        self.assertFalse(s.AddChild(libvtd.node.Section(level=s.level)))
+        self.assertTrue(s.AddChild(libvtd.node.Section(level=s.level + 1)))
+
+        # Project, NextAction, or Comment can always be added.
+        self.assertTrue(s.AddChild(libvtd.node.Project()))
+        self.assertTrue(s.AddChild(libvtd.node.NextAction()))
+        self.assertTrue(s.AddChild(libvtd.node.Comment()))
 
     def testNestingUnderProject(self):
-        """Check that anything except Section can nest under a Project."""
-        self.assertFalse(self.project.AddChild(self.section))
-        self.assertTrue(self.project.AddChild(libvtd.node.Project()))
-        self.assertTrue(self.project.AddChild(self.next_action))
-        self.assertTrue(self.project.AddChild(self.comment))
+        """Check that anything except File or Section can nest under a Project.
+
+        Also check that only sufficiently indented blocks can nest.
+        """
+        p = libvtd.node.Project()
+
+        # File and Section can never nest under Project.
+        self.assertFalse(p.AddChild(libvtd.node.File()))
+        self.assertFalse(p.AddChild(libvtd.node.Section()))
+
+        # Project can be added, but only if sufficiently indented.
+        self.assertFalse(p.AddChild(libvtd.node.Project(indent=p.indent)))
+        self.assertTrue(p.AddChild(libvtd.node.Project(indent=p.indent + 2)))
+
+        # NextAction can be added, but only if sufficiently indented.
+        self.assertFalse(p.AddChild(
+            libvtd.node.NextAction(indent=p.indent)))
+        self.assertTrue(p.AddChild(
+            libvtd.node.NextAction(indent=p.indent + 2)))
+
+        # Comment can be added, but only if sufficiently indented.
+        self.assertFalse(p.AddChild(libvtd.node.Comment(indent=p.indent)))
+        self.assertTrue(p.AddChild(libvtd.node.Comment(indent=p.indent + 2)))
 
     def testNestingUnderNextAction(self):
         """Check that only Comment can nest under a NextAction."""
-        self.assertFalse(self.next_action.AddChild(self.section))
-        self.assertFalse(self.next_action.AddChild(self.project))
-        self.assertFalse(self.next_action.AddChild(libvtd.node.NextAction()))
-        self.assertTrue(self.next_action.AddChild(self.comment))
+        n = libvtd.node.NextAction()
+
+        # File and Section can never nest under Project.
+        self.assertFalse(n.AddChild(libvtd.node.File()))
+        self.assertFalse(n.AddChild(libvtd.node.Section()))
+
+        # Project cannot be added, regardless of indentation.
+        self.assertFalse(n.AddChild(libvtd.node.Project(indent=n.indent)))
+        self.assertFalse(n.AddChild(libvtd.node.Project(indent=n.indent + 2)))
+
+        # NextAction cannot be added, regardless of indentation.
+        self.assertFalse(n.AddChild(
+            libvtd.node.NextAction(indent=n.indent)))
+        self.assertFalse(n.AddChild(
+            libvtd.node.NextAction(indent=n.indent + 2)))
+
+        # Comment can be added, but only if sufficiently indented.
+        self.assertFalse(n.AddChild(libvtd.node.Comment(indent=n.indent)))
+        self.assertTrue(n.AddChild(libvtd.node.Comment(indent=n.indent + 2)))
 
     def testNestingUnderComment(self):
         """Check that only Comment can nest under a Comment."""
-        self.assertFalse(self.comment.AddChild(self.section))
-        self.assertFalse(self.comment.AddChild(self.project))
-        self.assertFalse(self.comment.AddChild(self.next_action))
-        self.assertTrue(self.comment.AddChild(libvtd.node.Comment()))
+        c = libvtd.node.Comment()
+
+        # File and Section can never nest under Project.
+        self.assertFalse(c.AddChild(libvtd.node.File()))
+        self.assertFalse(c.AddChild(libvtd.node.Section()))
+
+        # Project cannot be added, regardless of indentation.
+        self.assertFalse(c.AddChild(libvtd.node.Project(indent=c.indent)))
+        self.assertFalse(c.AddChild(libvtd.node.Project(indent=c.indent + 2)))
+
+        # NextAction cannot be added, regardless of indentation.
+        self.assertFalse(c.AddChild(
+            libvtd.node.NextAction(indent=c.indent)))
+        self.assertFalse(c.AddChild(
+            libvtd.node.NextAction(indent=c.indent + 2)))
+
+        # Comment can be added, but only if sufficiently indented.
+        self.assertFalse(c.AddChild(libvtd.node.Comment(indent=c.indent)))
+        self.assertTrue(c.AddChild(libvtd.node.Comment(indent=c.indent + 2)))
+
+    def testAtomicAbsorption(self):
+        """Failed call to AbsorbText must leave Node in its original state.
+        """
+        action = libvtd.node.File.CreateNodeFromLine('  @ Action')
+        test_action = copy.deepcopy(action)
+        # This text should be invalid, because it's less indented than the
+        # parent text.
+        self.assertFalse(test_action.AbsorbText('@p:1 @work @t:15 to do'))
+        self.assertDictEqual(test_action.__dict__, action.__dict__)
+
+    def testAbsorption(self):
+        # File should not ever absorb text; its text should only come from the
+        # file contents.
+        self.assertFalse(libvtd.node.File(None).AbsorbText('More file text!'))
+
+        # Section should absorb text only when new.
+        section = libvtd.node.Section(3)
+        self.assertTrue(section.AbsorbText('To do later'))
+        self.assertEqual('To do later', section.text)
+        self.assertFalse(section.AbsorbText('extra text'))
+
+        # Project can absorb anything indented by enough (and blank lines).
+        project = libvtd.node.File.CreateNodeFromLine('  # Project which')
+        self.assertTrue(project.AbsorbText(''))
+        self.assertFalse(project.AbsorbText('  is NOT indented enough'))
+        self.assertTrue(project.AbsorbText('    IS indented enough'))
+        self.assertEqual('Project which\n\nIS indented enough', project.text)
+
+        # NextAction can also absorb anything indented by enough.
+        action = libvtd.node.File.CreateNodeFromLine('  @ NextAction which')
+        self.assertTrue(action.AbsorbText(''))
+        self.assertFalse(action.AbsorbText('  is NOT indented enough'))
+        self.assertTrue(action.AbsorbText('    IS indented enough'))
+        self.assertEqual('NextAction which\n\nIS indented enough', action.text)
+
+        # Comment can also absorb anything indented by enough.
+        comment = libvtd.node.File.CreateNodeFromLine('  * Comment which')
+        self.assertTrue(comment.AbsorbText(''))
+        self.assertFalse(comment.AbsorbText('  is NOT indented enough'))
+        self.assertTrue(comment.AbsorbText('    IS indented enough'))
+        self.assertEqual('Comment which\n\nIS indented enough', comment.text)
+
+
+class TestFile(unittest.TestCase):
+    """Test the File class."""
+
+    def testParseSimpleSection(self):
+        """Parse a line corresponding to a section"""
+        section = libvtd.node.File.CreateNodeFromLine('= A section =')
+        self.assertEqual('A section', section.text)
+        self.assertEqual(1, section.level)
+
+    def testParseSectionWithAttributes(self):
+        """Parse a section with default priority and contexts."""
+        section = libvtd.node.File.CreateNodeFromLine(
+            '== @@Home @p:3 relaxing @t:20 ==')
+        # The time-tag does *not* get filtered out, because that only works for
+        # NextAction objects.
+        self.assertEqual('Home relaxing @t:20', section.text)
+        self.assertEqual(2, section.level)
+        self.assertItemsEqual(['home'], section.contexts)
+        self.assertEqual(3, section.priority)
+
+    def testParseNextAction(self):
+        action = libvtd.node.File.CreateNodeFromLine(
+            '  @ @p:1 @@Read @t:15 chapter 8 >2013-06-28 13:00 '
+            '@home <2013-07-05 22:30')
+        self.assertEqual('NextAction', action.__class__.__name__)
+        self.assertEqual('Read chapter 8', action.text)
+        self.assertItemsEqual(['read', 'home'], action.contexts)
+        self.assertEqual(datetime.datetime(2013, 6, 28, 13),
+                         action.visible_date)
+        self.assertEqual(datetime.datetime(2013, 7, 5, 22, 30),
+                         action.due_date)
+        self.assertEqual(2, action.indent)
+        self.assertEqual(1, action.priority)
+        self.assertEqual(15, action.minutes)

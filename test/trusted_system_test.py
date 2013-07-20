@@ -1,5 +1,4 @@
 import contextlib
-import datetime
 import os
 import re
 import tempfile
@@ -14,7 +13,7 @@ import libvtd.trusted_system
 @contextlib.contextmanager
 def TempInput(data):
     temp = tempfile.NamedTemporaryFile(delete=False)
-    temp.write(data)
+    temp.write('\n'.join(data))
     temp.close()
     yield temp.name
     os.unlink(temp.name)
@@ -41,39 +40,6 @@ def FirstTextMatch(node_list, search_regex):
 # Test code
 
 
-class TestParsing(unittest.TestCase):
-    """Test the parsing of individual items."""
-
-    def testParseSimpleSection(self):
-        """Parse a line corresponding to a section"""
-        section = libvtd.trusted_system.ParseNode('= A section =')
-        self.assertEqual('A section', section.text)
-        self.assertEqual(1, section.level)
-
-    def testParseSectionWithAttributes(self):
-        """Parse a section with default priority and contexts."""
-        section = libvtd.trusted_system.ParseNode('== @@Home @p:3 relaxing ==')
-        self.assertEqual('Home relaxing', section.text)
-        self.assertEqual(2, section.level)
-        self.assertItemsEqual(['home'], section.contexts)
-        self.assertEqual(3, section.priority)
-
-    def testParseNextAction(self):
-        action = libvtd.trusted_system.ParseNode(
-            '  @ @p:1 @@Read @t:15 chapter 8 >2013-06-28 13:00 '
-            '@home <2013-07-05 22:30')
-        self.assertEqual('NextAction', action.__class__.__name__)
-        self.assertEqual('Read chapter 8', action.text)
-        self.assertItemsEqual(['read', 'home'], action.contexts)
-        self.assertEqual(datetime.datetime(2013, 6, 28, 13),
-                         action.visible_date)
-        self.assertEqual(datetime.datetime(2013, 7, 5, 22, 30),
-                         action.due_date)
-        self.assertEqual(2, action.indent)
-        self.assertEqual(1, action.priority)
-        self.assertEqual(15, action.minutes)
-
-
 class TestTrustedSystemBaseClass(unittest.TestCase):
 
     def setUp(self):
@@ -86,40 +52,42 @@ class TestTrustedSystemBaseClass(unittest.TestCase):
 
 class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
     def testInheritContext(self):
-        self.addAnonymousFile(
-            "@test"
-            ""
-            "@ Top-level action"
-            "- Project"
-            "  @ Inherited action"
-            "- Project which cancels context @!test @x"
-            "  @ Action which should show up only under 'x'"
-        )
+        self.addAnonymousFile([
+            "= Section @test =",
+            "",
+            "@ Top-level action",
+            "- Project",
+            "  @ Inherited action",
+            "- Project which cancels context @!test @x",
+            "  @ Action which should show up only under 'x'",
+        ])
         # Check @test actions
-        next_actions = self.trusted_system.NextActions(contexts=['test'])
+        self.trusted_system.SetContexts(include=['test'])
+        next_actions = self.trusted_system.NextActions()
         self.assertItemsEqual(['Top-level action', 'Inherited action'],
                               [x.text for x in next_actions])
         # Check @x actions
-        next_actions = self.trusted_system.NextActions(contexts=['x'])
+        self.trusted_system.SetContexts(include=['x'])
+        next_actions = self.trusted_system.NextActions()
         self.assertItemsEqual(["Action which should show up only under 'x'"],
                               [x.text for x in next_actions])
         # Get the actions; check their priorities... somehow!
 
     def testInheritPriority(self):
-        self.addAnonymousFile(
-            "@p:4 @test"
-            ""
-            "@ Priority 4 task"
-            "- Unordered Project @p:2"
-            "  @ Priority 2 task"
-            "  @ Priority 0 task @p:0"
-        )
-        next_actions = self.trusted_system.NextActions(contexts=['test'])
+        self.addAnonymousFile([
+            "= Section @p:4 @test =",
+            "",
+            "@ Priority 4 task",
+            "- Unordered Project @p:2",
+            "  @ Priority 2 task",
+            "  @ Priority 0 task @p:0",
+        ])
+        self.trusted_system.SetContexts(include=['test'])
+        next_actions = self.trusted_system.NextActions()
         self.assertEqual(3, len(next_actions))
         self.assertEqual(0, FirstTextMatch(next_actions, "Pri.*0").priority)
         self.assertEqual(2, FirstTextMatch(next_actions, "Pri.*2").priority)
         self.assertEqual(4, FirstTextMatch(next_actions, "Pri.*4").priority)
-        # Get the actions; check their priorities... somehow!
 
 
 class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
@@ -135,15 +103,20 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
             needlessly block a project.
         SOLUTION: List projects without next actions.
         """
-        self.addAnonymousFile(
-            "# Ordered project."
-            "  @ First task (DONE 2013-05-02 20:59)"
-            ""
-            "- Empty project."
-            ""
-            "# Project WITH next action"
-            "  @ Next action"
-        )
+        self.addAnonymousFile([
+            "# Ordered project.",
+            "",
+            "# Another ordered project",
+            "  @ First task (DONE 2013-05-02 20:59)",
+            "  @ Second task, which makes the parent Project not show up.",
+            "",
+            "- Empty super-project.",
+            "  * The super-project shouldn't show up; the sub-project will.",
+            "  - Empty project.",
+            "",
+            "# Project WITH next action",
+            "  @ Next action",
+        ])
         projects = self.trusted_system.ProjectsWithoutNextActions()
         self.assertEqual(2, len(projects))
         self.assertItemsEqual(['Ordered project.', 'Empty project.'],
@@ -156,19 +129,18 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
             it won't show up in any lists!
         SOLUTION: List next actions without contexts.
         """
-        self.addAnonymousFile(
-            "# Project with context @test."
-            "  @ Should not show up"
-            ""
-            "# Project without context."
-            "  @ Should show up"
-            ""
-            "= Section with context ="
-            "@test"
-            ""
-            "# Project with implicit context."
-            "  @ Also should not show up"
-        )
+        self.addAnonymousFile([
+            "# Project with context @test",
+            "  @ Should not show up",
+            "",
+            "# Project without context.",
+            "  @ Should show up",
+            "",
+            "= Section with context @test =",
+            "",
+            "# Project with implicit context.",
+            "  @ Also should not show up",
+        ])
         next_actions = self.trusted_system.NextActionsWithoutContexts()
         self.assertEqual(1, len(next_actions))
         self.assertItemsEqual(['Should show up'],

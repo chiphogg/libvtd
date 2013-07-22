@@ -236,12 +236,34 @@ class DoableNode(Node):
                                r'\((DONE|WONTDO)( {})?\)'.format(
                                    Node._date_pattern)
                                + Node._r_end)
+    _id_word = r'(?P<id>\w+)'
+    _id_pattern = re.compile(Node._r_start + r'#' + _id_word + Node._r_end)
+    _after_pattern = re.compile(Node._r_start + r'@after:' + _id_word +
+                                Node._r_end)
+
     def __init__(self, *args, **kwargs):
         super(DoableNode, self).__init__(*args, **kwargs)
         self.done = False
 
+        # A list of ids for DoableNode objects which must be marked DONE before
+        # *this* DoableNode will be visible.
+        self.blockers = []
+
+        # A list of ids for this DoableNode.  The initial id is for internal
+        # usage only; note that it can never match the _id_pattern regex.
+        # Other IDs may be added using the _id_pattern regex.
+        self.ids = ['*{}'.format(id(self))]
+
+    def ParseAfter(self, match):
+        self.blockers.extend([match.group('id')])
+        return ''
+
     def ParseDone(self, match):
         self.done = True
+        return ''
+
+    def ParseId(self, match):
+        self.ids.extend([match.group('id')])
         return ''
 
     def _ParseSpecializedTokens(self, text):
@@ -249,6 +271,8 @@ class DoableNode(Node):
         """
         text = super(DoableNode, self)._ParseSpecializedTokens(text)
         text = self._done_pattern.sub(self.ParseDone, text)
+        text = self._id_pattern.sub(self.ParseId, text)
+        text = self._after_pattern.sub(self.ParseAfter, text)
         return text
 
 

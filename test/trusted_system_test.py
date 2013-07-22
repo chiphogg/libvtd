@@ -103,6 +103,26 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
 
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
+    def testExplicitBlockers(self):
+        self.addAnonymousFile([
+            "= @@Test section =",
+            "",
+            "@ Second action @after:firstAction",
+            "@ First action #firstAction",
+            "",
+            "@ Blocking action #blocker (DONE)",
+            "@ Newly unblocked action @after:blocker",
+            "",
+            "@ Blocker nonexistent @after:nothing",
+            "",
+            "- Blocked project @after:firstAction",
+            "  @ An action I should not see",
+        ])
+        self.trusted_system.SetContexts(include=['test'])
+        self.assertItemsEqual(
+            ['First action', 'Newly unblocked action', 'Blocker nonexistent'],
+            [x.text for x in self.trusted_system.NextActions()])
+
     def testDoneProjectPruned(self):
         self.addAnonymousFile([
             "- @@Test project",

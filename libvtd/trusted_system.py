@@ -40,6 +40,25 @@ class TrustedSystem:
                                                pruner=pruner))
         return match_list
 
+    def FindFirstNode(self, node, matcher):
+        """Find Node N where matcher(N) is True, from node and its children.
+
+        Args:
+            node: A Node object to search.
+            matcher: A function accepting a Node which defines what we're
+                looking for.
+
+        Returns:
+            The first Node to match.
+        """
+        if matcher(node):
+            return node
+        for child in node.children:
+            match = self.FindFirstNode(child, matcher)
+            if match:
+                return match
+        return None
+
     def NextActions(self):
         """A list of next actions currently visible in the given contexts."""
         next_actions = []
@@ -71,7 +90,42 @@ class TrustedSystem:
         Returns:
             True if node is visible; otherwise false.
         """
-        return self._OkContexts(node)
+        return self._OkContexts(node) and not self._Blocked(node)
+
+    def _Blocked(self, node):
+        """Checks whether the node is blocked.
+
+        Note that a node is also blocked if any ancestor is.
+        """
+        # Base case for recursion.
+        if not node:
+            return False
+
+        try:
+            for b in node.blockers:
+                if self._BlockerExists(id=b):
+                    return True
+        except AttributeError:
+            # This Node does not have the concept of blockers; hence, it's not
+            # blocked.
+            return False
+
+        return self._Blocked(node.parent)
+
+    def _BlockerExists(self, id):
+        """Checks whether a Node with the given id exists."""
+
+        def Matcher(node):
+            try:
+                return id in node.ids and not node.done
+            except AttributeError:
+                return False
+
+        for file in self._files:
+            if self.FindFirstNode(node=file, matcher=Matcher):
+                return True
+
+        return False
 
     def _OkContexts(self, node):
         """Checks whether node passes the contexts filter.

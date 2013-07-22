@@ -15,7 +15,8 @@ class TrustedSystem:
         self._files.append(new_file)
         pass
 
-    def Collect(self, node, matcher, pruner=lambda x: False):
+    def Collect(self, node, matcher,
+                pruner=lambda x: 'done' in x.__dict__ and x.done):
         """Gather Nodes from node and its children which fulfil some criteria.
 
         Args:
@@ -46,7 +47,8 @@ class TrustedSystem:
             next_actions.extend(self.Collect(node=file, matcher=lambda x:
                                              isinstance(x,
                                                         libvtd.node.NextAction)
-                                             and self._Visible(x)))
+                                             and self._Visible(x)
+                                             and not x.done))
         return next_actions
 
     def NextActionsWithoutContexts(self):
@@ -108,8 +110,9 @@ class TrustedSystem:
             if not isinstance(x, libvtd.node.Project):
                 return False
             for child in x.children:
-                if (isinstance(child, libvtd.node.NextAction) or
-                        isinstance(child, libvtd.node.Project)):
+                if ((isinstance(child, libvtd.node.NextAction)
+                        or isinstance(child, libvtd.node.Project))
+                        and not child.done):
                     return False
             return True
 

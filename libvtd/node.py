@@ -224,6 +224,29 @@ class IndentedNode(Node):
         return (not text.strip()) or text.startswith(' ' * self.text_indent)
 
 
+class DoableNode(Node):
+    """A Node which can be sensibly marked as DONE."""
+
+    _done_pattern = re.compile(Node._r_start +
+                               r'\((DONE|WONTDO)( {})?\)'.format(
+                                   Node._date_regex_string)
+                               + Node._r_end)
+    def __init__(self, *args, **kwargs):
+        super(DoableNode, self).__init__(*args, **kwargs)
+        self.done = False
+
+    def ParseDone(self, match):
+        self.done = True
+        return ''
+
+    def _ParseSpecializedTokens(self, text):
+        """Parse tokens specific to indented blocks.
+        """
+        text = super(DoableNode, self)._ParseSpecializedTokens(text)
+        text = self._done_pattern.sub(self.ParseDone, text)
+        return text
+
+
 class File(Node):
 
     _level = Node._level + 1
@@ -352,7 +375,7 @@ class Section(Node):
         return super(Section, self).CanContain(other)
 
 
-class Project(IndentedNode):
+class Project(DoableNode, IndentedNode):
 
     _level = Section._level + 1
     _can_nest_same_type = True
@@ -363,7 +386,7 @@ class Project(IndentedNode):
                                       **kwargs)
 
 
-class NextAction(IndentedNode):
+class NextAction(DoableNode, IndentedNode):
 
     _level = Project._level + 1
     _time = re.compile(Node._r_start + r'@t:(?P<time>\d+)' + Node._r_end)
@@ -387,6 +410,7 @@ class NextAction(IndentedNode):
     def _ParseSpecializedTokens(self, text):
         """Parse NextAction-specific tokens.
         """
+        text = super(NextAction, self)._ParseSpecializedTokens(text)
         text = self._time.sub(self.ParseTime, text)
         return text
 

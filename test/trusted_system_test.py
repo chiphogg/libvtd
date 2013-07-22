@@ -89,6 +89,37 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         self.assertEqual(2, FirstTextMatch(next_actions, "Pri.*2").priority)
         self.assertEqual(4, FirstTextMatch(next_actions, "Pri.*4").priority)
 
+    def testDone(self):
+        self.addAnonymousFile([
+            "= @@Test section =",
+            "",
+            "@ Finished action (DONE)",
+            "@ Unfinished action",
+        ])
+        self.trusted_system.SetContexts(include=['test'])
+        self.assertItemsEqual(
+            ['Unfinished action'],
+            [x.text for x in self.trusted_system.NextActions()])
+
+
+class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
+    def testDoneProjectPruned(self):
+        self.addAnonymousFile([
+            "- @@Test project",
+            "  - First subproject (DONE 2013-07-20 15:30)",
+            "    @ A task for the first subproject",
+            "    @ Another such task",
+            "  - Second subproject",
+            "    @ A task for the second subproject (DONE 2013-07-20 12:00)",
+            "    @ Another second-subproject task",
+            "  - Third subproject (WONTDO)",
+            "    @ Something urgent but not important",
+        ])
+        self.trusted_system.SetContexts(include=['test'])
+        self.assertItemsEqual(
+            ['Another second-subproject task'],
+            [x.text for x in self.trusted_system.NextActions()])
+
 
 class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
     """Test "paranoia" features.
@@ -105,6 +136,7 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
         """
         self.addAnonymousFile([
             "# Ordered project.",
+            "  @ First task (DONE 2013-05-02 20:59)",
             "",
             "# Another ordered project",
             "  @ First task (DONE 2013-05-02 20:59)",

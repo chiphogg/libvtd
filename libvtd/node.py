@@ -19,10 +19,10 @@ class Node(object):
     _r_end = r'(?=\s|$)'
     _date_format = r'%Y-%m-%d'
     _datetime_format = r'%Y-%m-%d %H:%M'
-    _date_regex_string = (r'(?P<datetime>\d{4}-\d{2}-\d{2}'
-                          r'( (?P<time>\d{2}:\d{2}))?)')
-    _due_date = re.compile(_r_start + r'<' + _date_regex_string + _r_end)
-    _vis_date = re.compile(_r_start + r'>' + _date_regex_string + _r_end)
+    _date_pattern = (r'(?P<datetime>\d{4}-\d{2}-\d{2}'
+                     r'( (?P<time>\d{2}:\d{2}))?)')
+    _due_date = re.compile(_r_start + r'<' + _date_pattern + _r_end)
+    _vis_date = re.compile(_r_start + r'>' + _date_pattern + _r_end)
     _context = re.compile(_r_start + r'(?P<prefix>@{1,2})(?P<cancel>!?)' +
                           r'(?P<context>\w+)' + _r_end)
     _priority_pattern = re.compile(_r_start + r'@p:(?P<priority>[01234])' +
@@ -229,7 +229,7 @@ class DoableNode(Node):
 
     _done_pattern = re.compile(Node._r_start +
                                r'\((DONE|WONTDO)( {})?\)'.format(
-                                   Node._date_regex_string)
+                                   Node._date_pattern)
                                + Node._r_end)
     def __init__(self, *args, **kwargs):
         super(DoableNode, self).__init__(*args, **kwargs)

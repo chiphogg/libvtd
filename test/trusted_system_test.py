@@ -123,6 +123,27 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             ['First action', 'Newly unblocked action', 'Blocker nonexistent'],
             [x.text for x in self.trusted_system.NextActions()])
 
+    def testOrderedProjects(self):
+        self.addAnonymousFile([
+            "= @@Test section =",
+            "",
+            "# Ordered project",
+            "   @ First action",
+            "   @ Second action",
+            "",
+            "# Another ordered project",
+            "  @ Completed first action (DONE 2013-07-20 15:00)",
+            "  @ Newly-next Action",
+            "  - Fully blocked project",
+            "    @ Action A",
+            "    @ Action B",
+            "    @ Action C",
+        ])
+        self.trusted_system.SetContexts(include=['test'])
+        self.assertItemsEqual(
+            ['First action', 'Newly-next Action'],
+            [x.text for x in self.trusted_system.NextActions()])
+
     def testDoneProjectPruned(self):
         self.addAnonymousFile([
             "- @@Test project",

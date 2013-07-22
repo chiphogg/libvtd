@@ -413,6 +413,23 @@ class Project(DoableNode, IndentedNode):
                  **kwargs):
         super(Project, self).__init__(text=text, priority=priority, *args,
                                       **kwargs)
+        self.ordered = is_ordered
+
+    def AddChild(self, other):
+        if super(Project, self).AddChild(other):
+            if self.ordered and isinstance(other, DoableNode):
+                # If this Project is ordered, the new DoableNode will be
+                # blocked by the most recent not-done DoableNode child.
+                last_doable_node = None
+                for child in self.children:
+                    if (isinstance(child, DoableNode) and not child.done and
+                            child != other):
+                        last_doable_node = child
+                if last_doable_node and last_doable_node != other:
+                    temp_id = last_doable_node.ids[0]
+                    other.blockers.extend([temp_id])
+            return True
+        return False
 
 
 class NextAction(DoableNode, IndentedNode):

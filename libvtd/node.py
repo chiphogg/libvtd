@@ -85,6 +85,11 @@ class Node(object):
     def text(self):
         return self._text.strip()
 
+    def DebugName(self):
+        old_name = ('{} :: '.format(self.parent.DebugName()) if self.parent
+                    else '')
+        return '{}[{}] {}'.format(old_name, self.__class__.__name__, self.text)
+
     def ParseDueDate(self, match):
         """Parses the due date from a match object.
 

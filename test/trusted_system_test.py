@@ -1,4 +1,5 @@
 import contextlib
+import itertools
 import os
 import re
 import tempfile
@@ -100,6 +101,31 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         self.assertItemsEqual(
             ['Unfinished action'],
             [x.text for x in self.trusted_system.NextActions()])
+
+
+class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
+    def testListContexts(self):
+        self.addAnonymousFile([
+            "@ E.T. @@phone @@home",                # home, phone
+            "@ Go @@home",                          # home
+            "@ @@Work harder",                      # work
+            "@ @@Phone @@Mom and @@Dad",            # dad, mom, phone
+            "@ Wash the dishes @home",              # home
+            "# Ordered @@work project",
+            "  @ First step, which is unblocked.",  # work
+            "  @ Second step, which is blocked.",
+        ])
+        expected_contexts = [
+            ('home', 3),
+            ('phone', 2),
+            ('work', 2),
+            ('dad', 1),
+            ('mom', 1),
+        ]
+        for (expected, actual) in itertools.izip_longest(
+                expected_contexts, self.trusted_system.ContextList()):
+            self.assertEqual(expected, actual)
+
 
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):

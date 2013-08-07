@@ -1,3 +1,5 @@
+import collections
+
 import libvtd.node
 
 
@@ -39,6 +41,25 @@ class TrustedSystem:
                 match_list.extend(self.Collect(child, matcher=matcher,
                                                pruner=pruner))
         return match_list
+
+    def ContextList(self):
+        """All contexts with visible NextActions, together with a count.
+
+        Returns:
+            A list of (context, count) pairs, ordered first by the count
+            (descending) and second by the context (alphabetical).
+        """
+        contexts = collections.Counter()
+
+        def Matcher(node):
+            if self._VisibleNextAction(node):
+                contexts.update(node.contexts)
+            return False
+
+        for file in self._files:
+            self.Collect(node=file, matcher=Matcher)
+
+        return contexts.most_common()
 
     def FindFirstNode(self, node, matcher):
         """Find Node N where matcher(N) is True, from node and its children.

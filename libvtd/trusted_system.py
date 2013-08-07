@@ -59,15 +59,28 @@ class TrustedSystem:
                 return match
         return None
 
+    def _VisibleNextAction(self, node):
+        """Check whether node is a NextAction which is currently visible.
+
+        (Does not check contexts.)
+
+        Args:
+            node: The object to check.
+
+        Returns:
+            Boolean indicating whether this is a currently-visible (i.e., apart
+            from contexts) NextAction.
+        """
+        return (isinstance(node, libvtd.node.NextAction)
+                and not self._Blocked(node)
+                and not node.done)
+
     def NextActions(self):
         """A list of next actions currently visible in the given contexts."""
         next_actions = []
+        matcher = lambda x: self._VisibleNextAction(x) and self._OkContexts(x)
         for file in self._files:
-            next_actions.extend(self.Collect(node=file, matcher=lambda x:
-                                             isinstance(x,
-                                                        libvtd.node.NextAction)
-                                             and self._Visible(x)
-                                             and not x.done))
+            next_actions.extend(self.Collect(node=file, matcher=matcher))
         return next_actions
 
     def NextActionsWithoutContexts(self):
@@ -80,17 +93,6 @@ class TrustedSystem:
                                              and not x.contexts))
         print [x.text for x in next_actions]
         return next_actions
-
-    def _Visible(self, node):
-        """Checks whether node is currently visible.
-
-        Args:
-            node: A Node object to check.
-
-        Returns:
-            True if node is visible; otherwise false.
-        """
-        return self._OkContexts(node) and not self._Blocked(node)
 
     def _Blocked(self, node):
         """Checks whether the node is blocked.

@@ -102,6 +102,48 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             ['Unfinished action'],
             [x.text for x in self.trusted_system.NextActions()])
 
+    def testRefresh(self):
+        self.trusted_system.SetContexts(include=['test'])
+
+        # First iteration of test file: just one action.
+        temp = tempfile.NamedTemporaryFile(delete=False)
+        temp.write('\n'.join([
+            "= @@Test section =",
+            "",
+            "@ first action"
+        ]))
+        temp.close()
+        self.trusted_system.AddFile(temp.name)
+        self.assertLess(os.path.getmtime(temp.name),
+                        self.trusted_system.last_refreshed)
+        self.assertItemsEqual(
+            ['first action'],
+            [x.text for x in self.trusted_system.NextActions()])
+
+        # Add text to the file, but make the system think it's already been
+        # updated; this new action should not show up.
+        with open(temp.name, 'a') as temp_file:
+            temp_file.write('\n@ next action')
+        refresh_time = os.path.getmtime(temp.name) + 1
+        self.trusted_system.last_refreshed = refresh_time
+        self.trusted_system.Refresh()
+        self.assertItemsEqual(
+            ['first action'],
+            [x.text for x in self.trusted_system.NextActions()])
+
+        # Now change the time to before the file's modification time.  This
+        # time, Refresh() should update the timestamp and find the new action.
+        self.trusted_system.last_refreshed = os.path.getmtime(temp.name) - 1
+        self.trusted_system.Refresh()
+        self.assertLess(os.path.getmtime(temp.name),
+                        self.trusted_system.last_refreshed)
+        self.assertItemsEqual(
+            ['first action', 'next action'],
+            [x.text for x in self.trusted_system.NextActions()])
+
+        # Clean up after ourselves.
+        os.unlink(temp.name)
+
 
 class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
     def testListContexts(self):
@@ -125,7 +167,6 @@ class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
         for (expected, actual) in itertools.izip_longest(
                 expected_contexts, self.trusted_system.ContextList()):
             self.assertEqual(expected, actual)
-
 
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):

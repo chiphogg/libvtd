@@ -1,4 +1,6 @@
 import collections
+import datetime
+import os
 
 import libvtd.node
 
@@ -7,15 +9,28 @@ class TrustedSystem:
     """A system to keep track of all projects and actions."""
 
     def __init__(self):
-        self._files = []
+        self._files = {}
         self._contexts_to_include = []
         self._contexts_to_exclude = []
 
     def AddFile(self, file_name):
-        """Read and parse contents of file_name, adding to system."""
-        new_file = libvtd.node.File(file_name)
-        self._files.append(new_file)
-        pass
+        """Read and parse contents of file_name, adding to system.
+
+        Also Refresh()es all existing files, to avoid having some files
+        up-to-date and others not.
+
+        Args:
+            file_name: The name of a file to read.
+        """
+        self.Refresh()
+        self._files[file_name] = libvtd.node.File(file_name)
+
+    def Refresh(self):
+        """Reread any files updated since the last Refresh()."""
+        for file_name in self._files.keys():
+            if os.path.getmtime(file_name) > self.last_refreshed:
+                self._files[file_name] = libvtd.node.File(file_name)
+        self.last_refreshed = datetime.datetime.now().strftime('%s.%f')
 
     def Collect(self, node, matcher,
                 pruner=lambda x: 'done' in x.__dict__ and x.done):
@@ -56,7 +71,7 @@ class TrustedSystem:
                 contexts.update(node.contexts)
             return False
 
-        for file in self._files:
+        for file in self._files.values():
             self.Collect(node=file, matcher=Matcher)
 
         return contexts.most_common()
@@ -100,14 +115,14 @@ class TrustedSystem:
         """A list of next actions currently visible in the given contexts."""
         next_actions = []
         matcher = lambda x: self._VisibleNextAction(x) and self._OkContexts(x)
-        for file in self._files:
+        for file in self._files.values():
             next_actions.extend(self.Collect(node=file, matcher=matcher))
         return next_actions
 
     def NextActionsWithoutContexts(self):
         """A list of NextActions which don't have a context."""
         next_actions = []
-        for file in self._files:
+        for file in self._files.values():
             next_actions.extend(self.Collect(node=file, matcher=lambda x:
                                              isinstance(x,
                                                         libvtd.node.NextAction)
@@ -144,7 +159,7 @@ class TrustedSystem:
             except AttributeError:
                 return False
 
-        for file in self._files:
+        for file in self._files.values():
             if self.FindFirstNode(node=file, matcher=Matcher):
                 return True
 
@@ -194,6 +209,6 @@ class TrustedSystem:
             return True
 
         projects = []
-        for file in self._files:
+        for file in self._files.values():
             projects.extend(self.Collect(node=file, matcher=Matcher))
         return projects

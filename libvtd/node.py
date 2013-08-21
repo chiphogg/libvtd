@@ -2,6 +2,14 @@ import datetime
 import re
 
 
+class _Enum(tuple):
+    """A simple way to make enum types."""
+    __getattr__ = tuple.index
+
+
+DateStates = _Enum(['invisible', 'ready', 'due', 'late'])
+
+
 class Node(object):
 
     # The "_level" of a Node defines nesting behaviour.  No Node may nest
@@ -21,7 +29,9 @@ class Node(object):
     _datetime_format = r'%Y-%m-%d %H:%M'
     _date_pattern = (r'(?P<datetime>\d{4}-\d{2}-\d{2}'
                      r'( (?P<time>\d{2}:\d{2}))?)')
-    _due_date = re.compile(_r_start + r'<' + _date_pattern + _r_end)
+    _due_within_pattern = r'(\((?P<due_within>\d+)\))?'
+    _due_date = re.compile(_r_start + r'<' + _date_pattern +
+                           _due_within_pattern + _r_end)
     _vis_date = re.compile(_r_start + r'>' + _date_pattern + _r_end)
     _context = re.compile(_r_start + r'(?P<prefix>@{1,2})(?P<cancel>!?)' +
                           r'(?P<context>\w+)' + _r_end)
@@ -106,6 +116,16 @@ class Node(object):
             date = datetime.datetime.strptime(match.group('datetime'),
                                               strptime_format)
             self.due_date = date
+
+            # Date-only due dates occur at the *end* of the day.
+            if not match.group('time'):
+                self.due_date = (self.due_date +
+                                 datetime.timedelta(days=1, seconds=-1))
+
+            due_within = match.group('due_within')
+            days_before = (int(due_within) if due_within else 1)
+            self.ready_date = (self.due_date -
+                               datetime.timedelta(days=days_before))
             return ''
         except ValueError:
             return match.group(0)
@@ -253,6 +273,25 @@ class DoableNode(Node):
         # usage only; note that it can never match the _id_pattern regex.
         # Other IDs may be added using the _id_pattern regex.
         self.ids = ['*{}'.format(id(self))]
+
+    def DateState(self, now):
+        """The state of this node relative to now: late; ready; due; invisible.
+
+        Args:
+            now: datetime.datetime object giving the current time.
+
+        Returns:
+            An element of the DateStates enum.
+        """
+        if self.visible_date and now < self.visible_date:
+            return DateStates.invisible
+        if self.due_date is None:
+            return DateStates.ready
+        if self.due_date < now:
+            return DateStates.late
+        if self.ready_date < now:
+            return DateStates.due
+        return DateStates.ready
 
     def ParseAfter(self, match):
         self.blockers.extend([match.group('id')])

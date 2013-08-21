@@ -155,6 +155,60 @@ class TestNode(unittest.TestCase):
         self.assertTrue(comment.AbsorbText('    IS indented enough'))
         self.assertEqual('Comment which\n\nIS indented enough', comment.text)
 
+    def testDateStatesNoDates(self):
+        """Test DateStates for node with no dates."""
+        action = libvtd.node.NextAction()
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         action.DateState(datetime.datetime.now()))
+
+    def testDateStatesDefaultReadyDate(self):
+        """Test DateStates for node with due date, and implicit ready date."""
+        action = libvtd.node.NextAction()
+        self.assertTrue(action.AbsorbText(
+            '@ test default ready date <2013-08-27'))
+        # Tasks are 'ready' (i.e., not yet 'due') until the end of the day on
+        # the ready date.  The default ready date is 1 day before the due date.
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         action.DateState(datetime.datetime(2013, 8, 26, 23)))
+        # Tasks become due as soon as the ready date ends, and stay due until
+        # the end of the day on the due date.
+        self.assertEqual(libvtd.node.DateStates.due,
+                         action.DateState(datetime.datetime(2013, 8, 27, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         action.DateState(datetime.datetime(2013, 8, 27, 23)))
+        # Anything after the due date is late.
+        self.assertEqual(libvtd.node.DateStates.late,
+                         action.DateState(datetime.datetime(2013, 8, 28, 1)))
+
+    def testDateStatesExplicitReadyDate(self):
+        """Test DateStates with explicit ready date."""
+        action = libvtd.node.NextAction()
+        self.assertTrue(action.AbsorbText(
+            '@ test explicit ready date <2013-08-27(2)'))
+        # Tasks stay ready until the end of the day on the ready date.
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         action.DateState(datetime.datetime(2013, 8, 25, 23)))
+        # Tasks become due as soon as the ready date begins, and stay due until
+        # the end of the day on the due date.
+        self.assertEqual(libvtd.node.DateStates.due,
+                         action.DateState(datetime.datetime(2013, 8, 26, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         action.DateState(datetime.datetime(2013, 8, 27, 23)))
+        # Anything after the due date is late.
+        self.assertEqual(libvtd.node.DateStates.late,
+                         action.DateState(datetime.datetime(2013, 8, 28, 1)))
+
+    def testDateStatesVisibleDate(self):
+        """Test DateStates with explicit ready date."""
+        action = libvtd.node.NextAction()
+        self.assertTrue(action.AbsorbText('@ test visible date >2013-08-20'))
+        # Anything before the visible date is invisible.
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         action.DateState(datetime.datetime(2013, 8, 19, 23)))
+        # Tasks become ready as soon as the visible date begins.
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         action.DateState(datetime.datetime(2013, 8, 20, 1)))
+
 
 class TestFile(unittest.TestCase):
     """Test the File class."""

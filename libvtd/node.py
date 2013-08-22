@@ -402,8 +402,8 @@ class File(Node):
         comment_match = File._comment_pattern.match(text)
         if comment_match:
             indent = len(comment_match.group('indent'))
-            action = NextAction(indent=indent)
-            return (action, comment_match.group('text'))
+            comment = Comment(indent=indent)
+            return (comment, comment_match.group('text'))
 
         return (None, '')
 

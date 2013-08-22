@@ -168,6 +168,21 @@ class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
                 expected_contexts, self.trusted_system.ContextList()):
             self.assertEqual(expected, actual)
 
+    def testContextParsing(self):
+        self.trusted_system.SetContexts(include=['phone', 'online', 'bug'])
+        self.addAnonymousFile([
+            "@ @@Phone mom",
+            "@ Pay rent @online",
+            "@ Fix @@bug: colons",
+            "@ Fix SEGV @@bug!!",
+        ])
+        # Double-@ sign should leave the word intact; single-@ sign should be
+        # stripped out.  We implicitly check that the contexts get set by
+        # checking that we see the actions we expect.
+        self.assertItemsEqual(
+            ['Phone mom', 'Pay rent', 'Fix bug: colons', 'Fix SEGV bug!!'],
+            [x.text for x in self.trusted_system.NextActions()])
+
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
     def testExplicitBlockers(self):

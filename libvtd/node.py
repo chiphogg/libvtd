@@ -24,7 +24,7 @@ class Node(object):
     # Handy patterns and regexes.
     # Tags either start at the beginning of the line, or with a space.
     _r_start = r'(^| )'
-    _r_end = r'(?=\s|$)'
+    _r_end = r'(?=[.!?)"'';:]*(\s|$))'
     _date_format = r'%Y-%m-%d'
     _datetime_format = r'%Y-%m-%d %H:%M'
     _date_pattern = (r'(?P<datetime>\d{4}-\d{2}-\d{2}'

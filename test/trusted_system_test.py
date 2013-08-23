@@ -125,16 +125,15 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         # updated; this new action should not show up.
         with open(temp.name, 'a') as temp_file:
             temp_file.write('\n@ next action')
-        refresh_time = os.path.getmtime(temp.name) + 1
-        self.trusted_system.last_refreshed = refresh_time
+        time_interval = 60  # Adjust timestamps by this (arbitrary) amount.
+        self.trusted_system.last_refreshed += time_interval
         self.trusted_system.Refresh()
         self.assertItemsEqual(
             ['first action'],
             [x.text for x in self.trusted_system.NextActions()])
 
-        # Now change the time to before the file's modification time.  This
-        # time, Refresh() should update the timestamp and find the new action.
-        self.trusted_system.last_refreshed = os.path.getmtime(temp.name) - 1
+        # Refresh() should update the timestamp and find the new action.
+        self.trusted_system.last_refreshed -= 2 * time_interval
         self.trusted_system.Refresh()
         self.assertLess(os.path.getmtime(temp.name),
                         self.trusted_system.last_refreshed)

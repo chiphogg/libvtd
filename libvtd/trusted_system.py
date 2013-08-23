@@ -30,7 +30,7 @@ class TrustedSystem:
         for file_name in self._files.keys():
             if os.path.getmtime(file_name) > self.last_refreshed:
                 self._files[file_name] = libvtd.node.File(file_name)
-        self.last_refreshed = datetime.datetime.now().strftime('%s.%f')
+        self.last_refreshed = float(datetime.datetime.now().strftime('%s.%f'))
 
     def Collect(self, node, matcher,
                 pruner=lambda x: 'done' in x.__dict__ and x.done):

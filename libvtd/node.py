@@ -89,7 +89,7 @@ class Node(object):
     def priority(self):
         if self._priority is not None:
             return self._priority
-        return self.parent._priority if self.parent else None
+        return self.parent.priority if self.parent else None
 
     @property
     def text(self):

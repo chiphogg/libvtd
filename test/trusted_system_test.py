@@ -83,13 +83,16 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "- Unordered Project @p:2",
             "  @ Priority 2 task",
             "  @ Priority 0 task @p:0",
+            "- Ordered project (implicit priority 4)",
+            "  @ Do ordered project",
         ])
         self.trusted_system.SetContexts(include=['test'])
         next_actions = self.trusted_system.NextActions()
-        self.assertEqual(3, len(next_actions))
+        self.assertEqual(4, len(next_actions))
         self.assertEqual(0, FirstTextMatch(next_actions, "Pri.*0").priority)
         self.assertEqual(2, FirstTextMatch(next_actions, "Pri.*2").priority)
         self.assertEqual(4, FirstTextMatch(next_actions, "Pri.*4").priority)
+        self.assertEqual(4, FirstTextMatch(next_actions, "Do ord").priority)
 
     def testDone(self):
         self.addAnonymousFile([

@@ -83,7 +83,7 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "- Unordered Project @p:2",
             "  @ Priority 2 task",
             "  @ Priority 0 task @p:0",
-            "- Ordered project (implicit priority 4)",
+            "# Ordered project (implicit priority 4)",
             "  @ Do ordered project",
         ])
         self.trusted_system.SetContexts(include=['test'])

@@ -46,7 +46,7 @@ class Node(object):
         self._priority = priority
         self.children = []
         self.parent = None
-        self.due_date = None
+        self._due_date = None
         self.visible_date = None
 
         # Private variables
@@ -92,6 +92,15 @@ class Node(object):
         return self.parent.priority if self.parent else None
 
     @property
+    def due_date(self):
+        parent_due_date = self.parent.due_date if self.parent else None
+        if not self._due_date:
+            return parent_due_date
+        if not parent_due_date:
+            return self._due_date
+        return min(self._due_date, parent_due_date)
+
+    @property
     def text(self):
         return self._text.strip()
 
@@ -115,16 +124,16 @@ class Node(object):
         try:
             date = datetime.datetime.strptime(match.group('datetime'),
                                               strptime_format)
-            self.due_date = date
+            self._due_date = date
 
             # Date-only due dates occur at the *end* of the day.
             if not match.group('time'):
-                self.due_date = (self.due_date +
-                                 datetime.timedelta(days=1, seconds=-1))
+                self._due_date = (self._due_date +
+                                  datetime.timedelta(days=1, seconds=-1))
 
             due_within = match.group('due_within')
             days_before = (int(due_within) if due_within else 1)
-            self.ready_date = (self.due_date -
+            self.ready_date = (self._due_date -
                                datetime.timedelta(days=days_before))
             return ''
         except ValueError:

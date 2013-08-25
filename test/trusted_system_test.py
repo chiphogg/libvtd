@@ -5,6 +5,7 @@ import re
 import tempfile
 import unittest
 
+import libvtd.node
 import libvtd.trusted_system
 
 ###############################################################################
@@ -36,6 +37,24 @@ def FirstTextMatch(node_list, search_regex):
         if regex.search(node.text):
             return node
     return None
+
+
+def DueDate(date_string):
+    """Parse date_string into a VTD due date, using the VTD machinery.
+
+    This is handy because date-only due dates, such as "2013-08-25", get parsed
+    into end-of-day due times.  We don't want to worry about whether it's
+    "2013-08-25 23:59:59", "2013-08-25 23:59", or even something else.
+
+    Args:
+        date_string: A string which a VTD Node would recognize as a date/time.
+
+    Returns:
+        A datetime.datetime object giving the equivalent VTD due date.
+    """
+    node = libvtd.node.NextAction()
+    node.AbsorbText('<{}'.format(date_string))
+    return node.due_date
 
 ###############################################################################
 # Test code
@@ -93,6 +112,39 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         self.assertEqual(2, FirstTextMatch(next_actions, "Pri.*2").priority)
         self.assertEqual(4, FirstTextMatch(next_actions, "Pri.*4").priority)
         self.assertEqual(4, FirstTextMatch(next_actions, "Do ord").priority)
+
+    def testInheritDueDate(self):
+        self.addAnonymousFile([
+            "= Section @test =",
+            "",
+            "@ No due date",
+            "",
+            "- Project with due date <2013-08-25",
+            "  @ Inherits due date",
+            "  @ Has own due date <2013-08-23",
+            "  @ Use earliest of all due dates <2013-08-27",
+            "",
+            "= Section with due date @test <2013-07-25 =",
+            "",
+            "@ Get section's due date",
+            "",
+            "- Project without explicit due date",
+            "  @ Multi-level due date inheritance",
+        ])
+        self.trusted_system.SetContexts(include=['test'])
+        next_actions = self.trusted_system.NextActions()
+        self.assertEqual(6, len(next_actions))
+        self.assertIsNone(FirstTextMatch(next_actions, "^No due dat").due_date)
+        self.assertEqual(DueDate("2013-08-25"),
+                         FirstTextMatch(next_actions, "^Inherits du").due_date)
+        self.assertEqual(DueDate("2013-08-23"),
+                         FirstTextMatch(next_actions, "^Has own due").due_date)
+        self.assertEqual(DueDate("2013-08-25"),
+                         FirstTextMatch(next_actions, "^Use earlies").due_date)
+        self.assertEqual(DueDate("2013-07-25"),
+                         FirstTextMatch(next_actions, "^Get section").due_date)
+        self.assertEqual(DueDate("2013-07-25"),
+                         FirstTextMatch(next_actions, "^Multi-level").due_date)
 
     def testDone(self):
         self.addAnonymousFile([

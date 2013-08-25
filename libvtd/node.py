@@ -30,8 +30,8 @@ class Node(object):
     _date_pattern = (r'(?P<datetime>\d{4}-\d{2}-\d{2}'
                      r'( (?P<time>\d{2}:\d{2}))?)')
     _due_within_pattern = r'(\((?P<due_within>\d+)\))?'
-    _due_date = re.compile(_r_start + r'<' + _date_pattern +
-                           _due_within_pattern + _r_end)
+    _due_date_pattern = re.compile(_r_start + r'<' + _date_pattern +
+                                   _due_within_pattern + _r_end)
     _vis_date = re.compile(_r_start + r'>' + _date_pattern + _r_end)
     _context = re.compile(_r_start + r'(?P<prefix>@{1,2})(?P<cancel>!?)' +
                           r'(?P<context>\w+)' + _r_end)
@@ -104,7 +104,7 @@ class Node(object):
         """Parses the due date from a match object.
 
         Args:
-            match: A match from the self._due_date regex.
+            match: A match from the self._due_date_pattern regex.
 
         Returns:
             The text to replace match with.  If successful, this should be the
@@ -206,7 +206,7 @@ class Node(object):
 
         # Tokens which are common to all Node instances: due date;
         # visible-after date; contexts; priority.
-        text = self._due_date.sub(self.ParseDueDate, text)
+        text = self._due_date_pattern.sub(self.ParseDueDate, text)
         text = self._vis_date.sub(self.ParseVisDate, text)
         text = self._context.sub(self.ParseContext, text)
         text = self._priority_pattern.sub(self.ParsePriority, text)

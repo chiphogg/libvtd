@@ -2,6 +2,7 @@ import contextlib
 import itertools
 import os
 import re
+import subprocess
 import tempfile
 import unittest
 
@@ -237,6 +238,36 @@ class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
         self.assertItemsEqual(
             ['Phone mom', 'Pay rent', 'Fix bug: colons', 'Fix SEGV bug!!'],
             [x.text for x in self.trusted_system.NextActions()])
+
+
+class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
+    """Nodes should return a patch to perform various actions."""
+    def testDiffToggleTodo(self):
+        self.trusted_system.SetContexts(include=['test'])
+        with TempInput(['@ @@test patches', '']) as file_name:
+            self.trusted_system.AddFile(file_name)
+            self.assertItemsEqual(
+                ['test patches'],
+                [x.text for x in self.trusted_system.NextActions()])
+            action = FirstTextMatch(self.trusted_system.NextActions(), "^test")
+
+            # Get and apply the patch to check this off as DONE.
+            patch = action.Patch(libvtd.node.Actions.MarkDONE)
+            DEVNULL = open('/dev/null', 'w')
+            subprocess.Popen('patch {}'.format(action.file_name),
+                             shell=True, stdout=DEVNULL, stdin=subprocess.PIPE
+                             ).communicate(patch)
+            self.trusted_system.Refresh(force=True)
+            self.assertItemsEqual([], self.trusted_system.NextActions())
+
+            # Apply the patch in reverse; the action should reappear.
+            subprocess.Popen('patch -R {}'.format(action.file_name),
+                             shell=True, stdout=DEVNULL,
+                             stdin=subprocess.PIPE).communicate(patch)
+            self.trusted_system.Refresh(force=True)
+            self.assertItemsEqual(
+                ['test patches'],
+                [x.text for x in self.trusted_system.NextActions()])
 
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):

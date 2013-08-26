@@ -25,10 +25,10 @@ class TrustedSystem:
         self.Refresh()
         self._files[file_name] = libvtd.node.File(file_name)
 
-    def Refresh(self):
+    def Refresh(self, force=False):
         """Reread any files updated since the last Refresh()."""
         for file_name in self._files.keys():
-            if os.path.getmtime(file_name) > self.last_refreshed:
+            if force or os.path.getmtime(file_name) > self.last_refreshed:
                 self._files[file_name] = libvtd.node.File(file_name)
         self.last_refreshed = float(datetime.datetime.now().strftime('%s.%f'))
 

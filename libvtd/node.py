@@ -294,6 +294,7 @@ class DoableNode(Node):
     def __init__(self, *args, **kwargs):
         super(DoableNode, self).__init__(*args, **kwargs)
         self.done = False
+        self._diff_functions[Actions.MarkDONE] = self._PatchMarkDone
 
         # A list of ids for DoableNode objects which must be marked DONE before
         # *this* DoableNode will be visible.
@@ -343,6 +344,17 @@ class DoableNode(Node):
         text = self._id_pattern.sub(self.ParseId, text)
         text = self._after_pattern.sub(self.ParseAfter, text)
         return text
+
+    def _PatchMarkDone(self):
+        """A patch which toggles this DoableNode's 'DONE' status."""
+        if not self.done:
+            return '\n'.join([
+                '@@ -{0} +{0} @@',
+                '-{1}',
+                '+{1} (DONE 2013-08-25 21:38)',
+                ''
+            ]).format(self._line_in_file, self._raw_text[0])
+        return ''
 
 
 class File(Node):

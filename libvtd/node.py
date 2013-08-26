@@ -9,6 +9,7 @@ class _Enum(tuple):
 
 
 DateStates = _Enum(['invisible', 'ready', 'due', 'late'])
+Actions = _Enum(['MarkDONE'])
 
 
 class Node(object):
@@ -191,6 +192,21 @@ class Node(object):
         """
         self._priority = int(match.group('priority'))
         return ''
+
+    def Patch(self, action):
+        """A patch to perform the requested action.
+
+        Should be applied against this Node's file, if any.
+
+        Args:
+            action: An element of the libvtd.node.Actions enum.
+
+        Returns:
+            A string equivalent to the output of the 'diff' program; when
+            applied to the file, it performs the requested action.
+        """
+        assert action in range(len(Actions))
+        return self._diff_functions[action]()
 
     def _CanAbsorbText(self, text):
         """Indicates whether this Node can absorb the given line of text.

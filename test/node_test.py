@@ -121,6 +121,15 @@ class TestNode(unittest.TestCase):
         # This text should be invalid, because it's less indented than the
         # parent text.
         self.assertFalse(test_action.AbsorbText('@p:1 @work @t:15 to do'))
+        self.maxDiff = None
+
+        # Kind of ugly, but assertDictEqual fails for _diff_functions because
+        # the (otherwise identical) functions are bound to different objects.
+        keys_to_disregard = ['_diff_functions']
+        for key in keys_to_disregard:
+            test_action.__dict__.pop(key)
+            action.__dict__.pop(key)
+
         self.assertDictEqual(test_action.__dict__, action.__dict__)
 
     def testAbsorption(self):

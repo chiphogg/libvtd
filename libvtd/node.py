@@ -44,16 +44,16 @@ class Node(object):
         super(Node, self).__init__(*args, **kwargs)
 
         # Public properties.
-        self._text = text
-        self._priority = priority
         self.children = []
         self.parent = None
-        self._due_date = None
         self.visible_date = None
 
         # Private variables
         self._contexts = []
         self._canceled_contexts = []
+        self._due_date = None
+        self._priority = priority
+        self._text = text
 
         # A function which takes no arguments and returns a patch (as from
         # diff).  Default is the identity patch (i.e., the empty string).

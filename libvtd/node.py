@@ -1,3 +1,4 @@
+import collections
 import datetime
 import re
 
@@ -52,6 +53,10 @@ class Node(object):
         # Private variables
         self._contexts = []
         self._canceled_contexts = []
+
+        # A function which takes no arguments and returns a patch (as from
+        # diff).  Default is the identity patch (i.e., the empty string).
+        self._diff_functions = collections.defaultdict(lambda: lambda: '')
 
     def AddChild(self, other):
         """Add 'other' as a child of 'self' (and 'self' as parent of 'other').

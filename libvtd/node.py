@@ -107,6 +107,10 @@ class Node(object):
         return min(self._due_date, parent_due_date)
 
     @property
+    def file_name(self):
+        return self.parent.file_name if self.parent else None
+
+    @property
     def text(self):
         return self._text.strip()
 
@@ -382,6 +386,7 @@ class File(Node):
     def __init__(self, file_name=None, *args, **kwargs):
         super(File, self).__init__(text='', priority=None, *args, **kwargs)
         self.bad_lines = []
+        self._file_name = file_name
 
         try:
             # Read file contents and create a tree of Nodes from them.
@@ -408,6 +413,10 @@ class File(Node):
             print 'Warning: file ''{}'' does not exist.'.format(file_name)
         except TypeError:
             print 'Dummy file (no file name supplied).'
+
+    @property
+    def file_name(self):
+        return self._file_name
 
     @staticmethod
     def _CreateCorrectNodeType(text):

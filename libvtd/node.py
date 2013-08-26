@@ -53,6 +53,7 @@ class Node(object):
         self._canceled_contexts = []
         self._due_date = None
         self._priority = priority
+        self._raw_text = []
         self._text = text
 
         # A function which takes no arguments and returns a patch (as from
@@ -220,7 +221,7 @@ class Node(object):
         """
         return not self._text
 
-    def AbsorbText(self, text):
+    def AbsorbText(self, text, raw_text=None):
         """Strip out special sequences and add whatever's left to the text.
 
         "Special sequences" include sequences which *every* Node type is
@@ -237,6 +238,7 @@ class Node(object):
         """
         if not self._CanAbsorbText(text):
             return False
+        self._raw_text.append(raw_text if raw_text else text)
 
         # Tokens which are common to all Node instances: due date;
         # visible-after date; contexts; priority.
@@ -399,16 +401,17 @@ class File(Node):
                 # - If unsuccessful, try absorbing the text into the previous
                 #   node.
                 previous_node = self
-                for (line_num, line) in enumerate(vtd_file):
-                    new_node = self.CreateNodeFromLine(line)
+                for (line_num, line) in enumerate(vtd_file, 1):
+                    raw_text = line.rstrip('\n')
+                    new_node = self.CreateNodeFromLine(raw_text, line_num)
                     if new_node:
                         while (previous_node and not
                                previous_node.AddChild(new_node)):
                             previous_node = previous_node.parent
                         previous_node = new_node
                     else:
-                        if not previous_node.AbsorbText(line):
-                            self.bad_lines.append((line_num, line))
+                        if not previous_node.AbsorbText(raw_text):
+                            self.bad_lines.append((line_num, raw_text))
         except IOError:
             print 'Warning: file ''{}'' does not exist.'.format(file_name)
         except TypeError:
@@ -462,7 +465,7 @@ class File(Node):
         return False
 
     @staticmethod
-    def CreateNodeFromLine(line):
+    def CreateNodeFromLine(line, line_num=1):
         """Create the specific type of Node which this line represents.
 
         Args:
@@ -472,9 +475,10 @@ class File(Node):
             An instance of a Node subclass, or None if this line doesn't
             represent a valid Node.
         """
-        (new_node, raw_text) = File._CreateCorrectNodeType(line)
+        (new_node, text) = File._CreateCorrectNodeType(line)
         if new_node:
-            new_node.AbsorbText(raw_text)
+            new_node.AbsorbText(text, line)
+            new_node._line_in_file = line_num
         return new_node
 
 

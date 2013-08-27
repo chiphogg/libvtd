@@ -357,9 +357,10 @@ class DoableNode(Node):
             return '\n'.join([
                 '@@ -{0} +{0} @@',
                 '-{1}',
-                '+{1} (DONE 2013-08-25 21:38)',
+                '+{1} (DONE {2})',
                 ''
-            ]).format(self._line_in_file, self._raw_text[0])
+            ]).format(self._line_in_file, self._raw_text[0],
+                      datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
         return ''
 
 

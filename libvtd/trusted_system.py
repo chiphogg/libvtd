@@ -107,9 +107,37 @@ class TrustedSystem:
             Boolean indicating whether this is a currently-visible (i.e., apart
             from contexts) NextAction.
         """
+        return self._VisibleAction(node) and not node.recurring
+
+    def _VisibleAction(self, node):
+        """Check: node is a currently visible Next or Recurring Action.
+
+        (Does not check contexts.)
+
+        Args:
+            node: The object to check.
+
+        Returns:
+            Boolean indicating whether this is a currently-visible (i.e., apart
+            from contexts) NextAction.
+        """
         return (isinstance(node, libvtd.node.NextAction)
                 and not self._Blocked(node)
                 and not node.done)
+
+    def _VisibleRecurringAction(self, node):
+        """Check whether node is a Recurring Action which is currently visible.
+
+        (Does not check contexts.)
+
+        Args:
+            node: The object to check.
+
+        Returns:
+            Boolean indicating whether this is a currently-visible (i.e., apart
+            from contexts) NextAction.
+        """
+        return self._VisibleAction(node) and node.recurring
 
     def NextActions(self):
         """A list of next actions currently visible in the given contexts."""

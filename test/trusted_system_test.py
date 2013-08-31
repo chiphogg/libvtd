@@ -147,6 +147,19 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         self.assertEqual(DueDate("2013-07-25"),
                          FirstTextMatch(next_actions, "^Multi-level").due_date)
 
+    def testIgnoreRecurs(self):
+        self.addAnonymousFile([
+            "= Section @test =",
+            "",
+            "@ Regular action",
+            "@ Recurring action",
+            "  EVERY day",
+        ])
+        self.trusted_system.SetContexts(include=['test'])
+        self.assertItemsEqual(
+            ['Regular action'],
+            [x.text for x in self.trusted_system.NextActions()])
+
     def testDone(self):
         self.addAnonymousFile([
             "= @@Test section =",

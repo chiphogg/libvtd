@@ -297,9 +297,20 @@ class DoableNode(Node):
     _after_pattern = re.compile(Node._r_start + r'@after:' + _id_word +
                                 Node._r_end)
 
+    # Patterns for recurring actions
+    _recur_unit = r'(?P<unit>day)'
+    _recur_min_pattern = r'(?P<min>\d+)'
+    _recur_max_pattern = r'(?P<max>\d+)'
+    _recur_pattern = re.compile(Node._r_start +
+                                r'EVERY( ({}-)?{})? {}s?'.format(
+                                    _recur_min_pattern, _recur_max_pattern,
+                                    _recur_unit) +
+                                Node._r_end)
+
     def __init__(self, *args, **kwargs):
         super(DoableNode, self).__init__(*args, **kwargs)
         self.done = False
+        self.recurring = False
         self._diff_functions[Actions.MarkDONE] = self._PatchMarkDone
 
         # A list of ids for DoableNode objects which must be marked DONE before
@@ -342,6 +353,10 @@ class DoableNode(Node):
         self.ids.extend([match.group('id')])
         return ''
 
+    def ParseRecur(self, match):
+        self.recurring = True
+        return ''
+
     def _ParseSpecializedTokens(self, text):
         """Parse tokens specific to indented blocks.
         """
@@ -349,6 +364,7 @@ class DoableNode(Node):
         text = self._done_pattern.sub(self.ParseDone, text)
         text = self._id_pattern.sub(self.ParseId, text)
         text = self._after_pattern.sub(self.ParseAfter, text)
+        text = self._recur_pattern.sub(self.ParseRecur, text)
         return text
 
     def _PatchMarkDone(self):

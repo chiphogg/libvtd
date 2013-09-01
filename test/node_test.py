@@ -253,3 +253,28 @@ class TestFile(unittest.TestCase):
         self.assertEqual(2, action.indent)
         self.assertEqual(1, action.priority)
         self.assertEqual(15, action.minutes)
+
+
+class TestRecurringActions(unittest.TestCase):
+    """Test various kinds of recurring actions."""
+
+    def testDayRecurSimple(self):
+        """Test a simple action which recurs every day."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText("Check today's calendar EVERY day"))
+        self.assertEqual("Check today's calendar", recur.text)
+        self.assertTrue(recur.recurring)
+        self.assertEqual(libvtd.node.DateStates.new,
+                         recur.DateState(datetime.datetime.now()))
+
+        # After it's been done at least once, its visible, due, and late dates
+        # should be set accordingly.
+        self.assertTrue(recur.AbsorbText("  (LASTDONE 2013-09-01 16:14)"))
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 9, 1, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 2, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 2, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2013, 9, 3, 1)))

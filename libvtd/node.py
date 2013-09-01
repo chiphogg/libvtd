@@ -8,8 +8,32 @@ class _Enum(tuple):
     __getattr__ = tuple.index
 
 
-DateStates = _Enum(['invisible', 'ready', 'due', 'late'])
+# 'new' only makes sense for recurring actions.  It represents a recurring
+# action which hasn't been done yet.
+DateStates = _Enum(['new', 'invisible', 'ready', 'due', 'late'])
 Actions = _Enum(['MarkDONE'])
+
+
+def PreviousDatetime(date_and_time, time_string=None):
+    """The last datetime before 'date_and_time' that the time was 'time'.
+
+    Args:
+        date_and_time: A datetime.datetime object.
+        time_string: A string representing a time, in HH:MM format.
+
+    Returns:
+        A datetime.datetime object; the last datetime before 'date_and_time'
+        whose time was 'time_string'.
+    """
+    try:
+        time = datetime.datetime.strptime(time_string, '%H:%M').time()
+    except:
+        time = datetime.time()
+    new_datetime = datetime.datetime.combine(date_and_time.date(), time)
+    if new_datetime > date_and_time:
+        new_datetime -= datetime.timedelta(days=1)
+    assert new_datetime < date_and_time
+    return new_datetime
 
 
 class Node(object):
@@ -297,7 +321,11 @@ class DoableNode(Node):
     _after_pattern = re.compile(Node._r_start + r'@after:' + _id_word +
                                 Node._r_end)
 
-    # Patterns for recurring actions
+    # Patterns related to recurring actions.
+    _last_done_pattern = re.compile(Node._r_start +
+                                    r'\(LASTDONE {}\)'.format(
+                                        Node._date_pattern)
+                                    + Node._r_end)
     _recur_unit = r'(?P<unit>day)'
     _recur_min_pattern = r'(?P<min>\d+)'
     _recur_max_pattern = r'(?P<max>\d+)'
@@ -311,6 +339,7 @@ class DoableNode(Node):
         super(DoableNode, self).__init__(*args, **kwargs)
         self.done = False
         self.recurring = False
+        self.last_done = None
         self._diff_functions[Actions.MarkDONE] = self._PatchMarkDone
 
         # A list of ids for DoableNode objects which must be marked DONE before
@@ -331,6 +360,10 @@ class DoableNode(Node):
         Returns:
             An element of the DateStates enum.
         """
+        if self.recurring:
+            if not self.last_done:
+                return DateStates.new
+            self._SetRecurringDates()
         if self.visible_date and now < self.visible_date:
             return DateStates.invisible
         if self.due_date is None:
@@ -353,8 +386,21 @@ class DoableNode(Node):
         self.ids.extend([match.group('id')])
         return ''
 
+    def ParseLastDone(self, match):
+        try:
+            last_done = datetime.datetime.strptime(match.group('datetime'),
+                                                   self._datetime_format)
+            self.last_done = last_done
+            return ''
+        except ValueError:
+            return match.group(0)
+
     def ParseRecur(self, match):
         self.recurring = True
+        self._recur_max = match.group('max') if match.group('max') else 1
+        self._recur_min = match.group('min') if match.group('min') else \
+            self._recur_max
+        self._recur_due = self._recur_max
         return ''
 
     def _ParseSpecializedTokens(self, text):
@@ -365,6 +411,7 @@ class DoableNode(Node):
         text = self._id_pattern.sub(self.ParseId, text)
         text = self._after_pattern.sub(self.ParseAfter, text)
         text = self._recur_pattern.sub(self.ParseRecur, text)
+        text = self._last_done_pattern.sub(self.ParseLastDone, text)
         return text
 
     def _PatchMarkDone(self):
@@ -378,6 +425,16 @@ class DoableNode(Node):
             ]).format(self._line_in_file, self._raw_text[0],
                       datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
         return ''
+
+    def _SetRecurringDates(self):
+        """Set dates (visible, due, etc.) based on last-done date."""
+        base_datetime = PreviousDatetime(self.last_done)
+        self.visible_date = base_datetime \
+            + datetime.timedelta(days=self._recur_min)
+        self.ready_date = base_datetime \
+            + datetime.timedelta(days=self._recur_due)
+        self._due_date = base_datetime \
+            + datetime.timedelta(days=self._recur_max + 1)
 
 
 class File(Node):

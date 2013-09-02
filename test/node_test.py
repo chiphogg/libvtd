@@ -344,3 +344,18 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2013, 9, 6, 23)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2013, 9, 7, 1)))
+
+    def testWeekRecurSimple(self):
+        """Test a simple action which recurs every week."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Call parents EVERY week (LASTDONE 2013-09-01 08:30)'))
+        self.assertEqual('Call parents', recur.text)
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 9, 7, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 8, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 14, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2013, 9, 15, 1)))

@@ -1,5 +1,6 @@
 import collections
 import datetime
+import dateutil.parser
 import re
 
 
@@ -14,7 +15,7 @@ DateStates = _Enum(['new', 'invisible', 'ready', 'due', 'late'])
 Actions = _Enum(['MarkDONE'])
 
 
-def PreviousDatetime(date_and_time, time_string=None):
+def PreviousTime(date_and_time, time_string=None):
     """The last datetime before 'date_and_time' that the time was 'time'.
 
     Args:
@@ -32,6 +33,38 @@ def PreviousDatetime(date_and_time, time_string=None):
     new_datetime = datetime.datetime.combine(date_and_time.date(), time)
     if new_datetime > date_and_time:
         new_datetime -= datetime.timedelta(days=1)
+    assert new_datetime < date_and_time
+    return new_datetime
+
+
+def PreviousWeekday(date_and_time, weekday_string=None):
+    """The last datetime before 'date_and_time' on the given day of the week.
+
+    Args:
+        date_and_time: A datetime.datetime object.
+        time_string: A string representing a day of the week (and optionally, a
+            time).
+
+    Returns:
+        A datetime.datetime object; the last datetime before 'date_and_time'
+        whose time and day-of-week match 'weekday_string'.
+    """
+    try:
+        weekday_and_time = dateutil.parser.parse(weekday_string)
+    except:
+        weekday_and_time = dateutil.parser.parse('Sun 00:00')
+
+    if date_and_time.weekday() == weekday_and_time.weekday():
+        new_datetime = datetime.datetime.combine(date_and_time.date(),
+                                                 weekday_and_time.time())
+        if new_datetime > date_and_time:
+            new_datetime += datetime.timedelta(days=-7)
+    else:
+        new_datetime = datetime.datetime.combine(
+            date_and_time.date() +
+            datetime.timedelta(days=-((date_and_time.weekday() -
+                                       weekday_and_time.weekday()) % 7)),
+            weekday_and_time.time())
     assert new_datetime < date_and_time
     return new_datetime
 
@@ -326,7 +359,7 @@ class DoableNode(Node):
                                     r'\(LASTDONE {}\)'.format(
                                         Node._date_pattern)
                                     + Node._r_end)
-    _recur_unit_pattern = r'(?P<unit>day)'
+    _recur_unit_pattern = r'(?P<unit>day|week)'
     _recur_min_pattern = r'(?P<min>\d+)'
     _recur_max_pattern = r'(?P<max>\d+)'
     _recur_subunit_vis_pattern = r'(?P<vis>[^,]+)'
@@ -357,7 +390,8 @@ class DoableNode(Node):
     #   d: A datetime to reset.
     #   b: The boundary of the interval: a string to be parsed.
     _interval_boundary_function = {
-        'day': PreviousDatetime
+        'day': PreviousTime,
+        'week': PreviousWeekday,
     }
 
     # Functions which advance a datetime by some number of units.
@@ -368,7 +402,8 @@ class DoableNode(Node):
     #   d: A datetime to advance.
     #   n: Number of units to advance.
     _date_advancing_function = {
-        'day': lambda d, n: d + datetime.timedelta(days=n)
+        'day': lambda d, n: d + datetime.timedelta(days=n),
+        'week': lambda d, n: d + datetime.timedelta(days=7 * n),
     }
 
     def __init__(self, *args, **kwargs):

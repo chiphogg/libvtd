@@ -324,3 +324,23 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2013, 9, 4, 23)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2013, 9, 5, 1)))
+
+    def testDayRecurRange(self):
+        """Test action which recurs within a given range of days."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Check spare TP in bathrooms EVERY 3-5 days ' +
+            '(LASTDONE 2013-09-01 08:30)'))
+        self.assertEqual('Check spare TP in bathrooms', recur.text)
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 9, 3, 23)))
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         recur.DateState(datetime.datetime(2013, 9, 4, 1)))
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         recur.DateState(datetime.datetime(2013, 9, 5, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 6, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 6, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2013, 9, 7, 1)))

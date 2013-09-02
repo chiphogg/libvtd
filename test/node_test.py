@@ -375,3 +375,24 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2013, 9, 17, 6)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2013, 9, 17, 8)))
+
+    def testWeekRecurVisibleDateDoneLate(self):
+        """
+        Actions done late (but before vis-date) should count for previous week.
+
+        Identical to previous test, except it's done late; this shouldn't
+        change the due dates at all.
+        """
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Take out garbages EVERY week [Monday 12:00 - Tuesday 7:00] ' +
+            '(LASTDONE 2013-09-10 07:30)'))
+        self.assertEqual('Take out garbages', recur.text)
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 9, 16, 11)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 16, 13)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 17, 6)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2013, 9, 17, 8)))

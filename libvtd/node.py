@@ -508,6 +508,23 @@ class DoableNode(Node):
         base_datetime = self._interval_boundary_function[unit](
             self.last_done, self._recur_unit_boundary)
 
+        # If an action was completed after the due date, but before the next
+        # visible date, associate it with the previous interval.  (An example
+        # of the kind of disaster this prevents: suppose the rent is due on the
+        # 1st, and we pay it on the 2nd.  Then we risk the system thinking the
+        # rent is paid for the *new* month.
+        if self._recur_subunit_visible:
+            # This kind of operation doesn't really make sense if the task is
+            # visible for the entire interval.
+            previous_vis_date = self._interval_boundary_function[unit](
+                self.last_done, self._recur_subunit_visible)
+            # If we did the task after the due time, but before it was visible,
+            # then the previous due date comes *after* the previous visible
+            # date.  So, put the base datetime back in the *previous* unit.
+            if base_datetime > previous_vis_date:
+                base_datetime = self._date_advancing_function[unit](
+                    base_datetime, -1)
+
         # Set visible, ready, and due dates relative to base_datetime.
         self.visible_date = self._date_advancing_function[unit](
             base_datetime, self._recur_min)

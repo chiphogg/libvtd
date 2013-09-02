@@ -329,6 +329,7 @@ class DoableNode(Node):
     _recur_unit_pattern = r'(?P<unit>day)'
     _recur_min_pattern = r'(?P<min>\d+)'
     _recur_max_pattern = r'(?P<max>\d+)'
+    _recur_subunit_vis_pattern = r'(?P<vis>[^,]+)'
     _recur_unit_boundary_pattern = r'(?P<due>[^,]+)'
     _recur_pattern = re.compile(Node._r_start +
                                 r'\s*'.join([
@@ -339,7 +340,8 @@ class DoableNode(Node):
                                     # Which units:
                                     r' {}s?'.format(_recur_unit_pattern),
                                     # Which part of the unit:
-                                    r'(\[{}\])?'.format(
+                                    r'(\[({}-)?{}\])?'.format(
+                                        _recur_subunit_vis_pattern,
                                         _recur_unit_boundary_pattern),
                                 ]) +
                                 Node._r_end)
@@ -436,6 +438,7 @@ class DoableNode(Node):
             self._recur_max
         self._recur_unit = match.group('unit')
         self._recur_unit_boundary = match.group('due')
+        self._recur_subunit_visible = match.group('vis')
         return ''
 
     def _ParseSpecializedTokens(self, text):
@@ -473,6 +476,14 @@ class DoableNode(Node):
         # Set visible, ready, and due dates relative to base_datetime.
         self.visible_date = self._date_advancing_function[unit](
             base_datetime, self._recur_min)
+        if self._recur_subunit_visible:
+            # Move the visible date forward to the subunit boundary (if any).
+            # To do this, move it forward one full unit, then move it back
+            # until it matches the visible subunit boundary.
+            self.visible_date = self._date_advancing_function[unit](
+                self.visible_date, 1)
+            self.visible_date = self._interval_boundary_function[unit](
+                self.visible_date, self._recur_subunit_visible)
         self.ready_date = self._date_advancing_function[unit](
             base_datetime, self._recur_max)
         self._due_date = self._date_advancing_function[unit](

@@ -433,8 +433,8 @@ class DoableNode(Node):
 
     def ParseRecur(self, match):
         self.recurring = True
-        self._recur_max = match.group('max') if match.group('max') else 1
-        self._recur_min = match.group('min') if match.group('min') else \
+        self._recur_max = int(match.group('max')) if match.group('max') else 1
+        self._recur_min = int(match.group('min')) if match.group('min') else \
             self._recur_max
         self._recur_unit = match.group('unit')
         self._recur_unit_boundary = match.group('due')

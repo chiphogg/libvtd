@@ -309,3 +309,18 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2013, 9, 2, 8)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2013, 9, 2, 10)))
+
+    def testDayRecurMultipleDays(self):
+        """Test action which occurs every 3 days."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Shave EVERY 3 days (LASTDONE 2013-09-01 08:30)'))
+        self.assertEqual('Shave', recur.text)
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 9, 3, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 4, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 4, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2013, 9, 5, 1)))

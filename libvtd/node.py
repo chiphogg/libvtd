@@ -326,14 +326,48 @@ class DoableNode(Node):
                                     r'\(LASTDONE {}\)'.format(
                                         Node._date_pattern)
                                     + Node._r_end)
-    _recur_unit = r'(?P<unit>day)'
+    _recur_unit_pattern = r'(?P<unit>day)'
     _recur_min_pattern = r'(?P<min>\d+)'
     _recur_max_pattern = r'(?P<max>\d+)'
+    _recur_unit_boundary_pattern = r'(?P<due>[^,]+)'
     _recur_pattern = re.compile(Node._r_start +
-                                r'EVERY( ({}-)?{})? {}s?'.format(
-                                    _recur_min_pattern, _recur_max_pattern,
-                                    _recur_unit) +
+                                r'\s*'.join([
+                                    r'EVERY',
+                                    # How many:
+                                    r'( ({}-)?{})?'.format(_recur_min_pattern,
+                                                           _recur_max_pattern),
+                                    # Which units:
+                                    r' {}s?'.format(_recur_unit_pattern),
+                                    # Which part of the unit:
+                                    r'(\[{}\])?'.format(
+                                        _recur_unit_boundary_pattern),
+                                ]) +
                                 Node._r_end)
+
+    # Functions which reset a datetime to the beginning of an interval
+    # boundary: a day, a week, a month, etc.  This boundary can be arbitrary
+    # (e.g., reset to "the previous 14th of a month" or "the previous Tuesday
+    # at 17:00".)  One function for each type of interval.
+    #
+    # Related to recurring actions.
+    #
+    # Args:
+    #   d: A datetime to reset.
+    #   b: The boundary of the interval: a string to be parsed.
+    _interval_boundary_function = {
+        'day': PreviousDatetime
+    }
+
+    # Functions which advance a datetime by some number of units.
+    #
+    # Related to recurring actions.
+    #
+    # Args:
+    #   d: A datetime to advance.
+    #   n: Number of units to advance.
+    _date_advancing_function = {
+        'day': lambda d, n: d + datetime.timedelta(days=n)
+    }
 
     def __init__(self, *args, **kwargs):
         super(DoableNode, self).__init__(*args, **kwargs)
@@ -400,7 +434,8 @@ class DoableNode(Node):
         self._recur_max = match.group('max') if match.group('max') else 1
         self._recur_min = match.group('min') if match.group('min') else \
             self._recur_max
-        self._recur_due = self._recur_max
+        self._recur_unit = match.group('unit')
+        self._recur_unit_boundary = match.group('due')
         return ''
 
     def _ParseSpecializedTokens(self, text):
@@ -428,13 +463,20 @@ class DoableNode(Node):
 
     def _SetRecurringDates(self):
         """Set dates (visible, due, etc.) based on last-done date."""
-        base_datetime = PreviousDatetime(self.last_done)
-        self.visible_date = base_datetime \
-            + datetime.timedelta(days=self._recur_min)
-        self.ready_date = base_datetime \
-            + datetime.timedelta(days=self._recur_due)
-        self._due_date = base_datetime \
-            + datetime.timedelta(days=self._recur_max + 1)
+        unit = self._recur_unit
+
+        # Find the previous datetime (before the last-done time) which bounds
+        # the time interval (day, week, month, ...).
+        base_datetime = self._interval_boundary_function[unit](
+            self.last_done, self._recur_unit_boundary)
+
+        # Set visible, ready, and due dates relative to base_datetime.
+        self.visible_date = self._date_advancing_function[unit](
+            base_datetime, self._recur_min)
+        self.ready_date = self._date_advancing_function[unit](
+            base_datetime, self._recur_max)
+        self._due_date = self._date_advancing_function[unit](
+            base_datetime, self._recur_max + 1)
 
 
 class File(Node):

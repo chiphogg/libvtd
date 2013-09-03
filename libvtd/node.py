@@ -15,12 +15,13 @@ DateStates = _Enum(['new', 'invisible', 'ready', 'due', 'late'])
 Actions = _Enum(['MarkDONE'])
 
 
-def PreviousTime(date_and_time, time_string=None):
+def PreviousTime(date_and_time, time_string=None, due=True):
     """The last datetime before 'date_and_time' that the time was 'time'.
 
     Args:
         date_and_time: A datetime.datetime object.
         time_string: A string representing a time, in HH:MM format.
+        due: Whether this is for a due date (as opposed to a visible date).
 
     Returns:
         A datetime.datetime object; the last datetime before 'date_and_time'
@@ -37,13 +38,14 @@ def PreviousTime(date_and_time, time_string=None):
     return new_datetime
 
 
-def PreviousWeekday(date_and_time, weekday_string=None):
+def PreviousWeekday(date_and_time, weekday_string=None, due=True):
     """The last datetime before 'date_and_time' on the given day of the week.
 
     Args:
         date_and_time: A datetime.datetime object.
-        time_string: A string representing a day of the week (and optionally, a
-            time).
+        weekday_string: A string representing a day of the week (and
+            optionally, a time).
+        due: Whether this is for a due date (as opposed to a visible date).
 
     Returns:
         A datetime.datetime object; the last datetime before 'date_and_time'
@@ -51,6 +53,8 @@ def PreviousWeekday(date_and_time, weekday_string=None):
     """
     try:
         weekday_and_time = dateutil.parser.parse(weekday_string)
+        if due and not re.search('\d:\d\d', weekday_string):
+            weekday_and_time = weekday_and_time.replace(hour=23, minute=59)
     except:
         weekday_and_time = dateutil.parser.parse('Sun 00:00')
 
@@ -517,7 +521,7 @@ class DoableNode(Node):
             # This kind of operation doesn't really make sense if the task is
             # visible for the entire interval.
             previous_vis_date = self._interval_boundary_function[unit](
-                self.last_done, self._recur_subunit_visible)
+                self.last_done, self._recur_subunit_visible, due=False)
             # If we did the task after the due time, but before it was visible,
             # then the previous due date comes *after* the previous visible
             # date.  So, put the base datetime back in the *previous* unit.
@@ -535,7 +539,7 @@ class DoableNode(Node):
             self.visible_date = self._date_advancing_function[unit](
                 self.visible_date, 1)
             self.visible_date = self._interval_boundary_function[unit](
-                self.visible_date, self._recur_subunit_visible)
+                self.visible_date, self._recur_subunit_visible, due=False)
         self.ready_date = self._date_advancing_function[unit](
             base_datetime, self._recur_max)
         self._due_date = self._date_advancing_function[unit](

@@ -360,6 +360,49 @@ class TestRecurringActions(unittest.TestCase):
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2013, 9, 15, 1)))
 
+    def testWeekRecurDueDate(self):
+        """Recurs every 1-2 weeks; change boundary so we don't split weekend.
+
+        Also checks that the due date falls on the *end* of the day, if no time
+        is specified.
+        """
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Call parents EVERY 1-2 weeks[Sun] (LASTDONE 2013-09-03 08:30)'))
+        self.assertEqual('Call parents', recur.text)
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 9, 8, 23)))
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         recur.DateState(datetime.datetime(2013, 9, 9, 1)))
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         recur.DateState(datetime.datetime(2013, 9, 15, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 16, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 22, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2013, 9, 23, 1)))
+
+    def testWeekRecurTrickyDateBoundaries(self):
+        """Check that visible date is start of day; due date is end of day."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Call parents EVERY 1-2 weeks[Sat-Sun] ' +
+            '(LASTDONE 2013-09-03 08:30)'))
+        self.assertEqual('Call parents', recur.text)
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 9, 6, 23)))
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         recur.DateState(datetime.datetime(2013, 9, 7, 1)))
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         recur.DateState(datetime.datetime(2013, 9, 8, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 14, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 9, 15, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2013, 9, 16, 1)))
+
     def testWeekRecurVisibleDate(self):
         """Weekly recurring action with a custom visible date."""
         recur = libvtd.node.NextAction()

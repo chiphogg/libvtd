@@ -113,6 +113,7 @@ class Node(object):
         self._contexts = []
         self._canceled_contexts = []
         self._due_date = None
+        self._ready_date = None
         self._priority = priority
         self._raw_text = []
         self._text = text
@@ -169,6 +170,15 @@ class Node(object):
         return min(self._due_date, parent_due_date)
 
     @property
+    def ready_date(self):
+        parent_ready_date = self.parent.ready_date if self.parent else None
+        if not self._ready_date:
+            return parent_ready_date
+        if not parent_ready_date:
+            return self._ready_date
+        return min(self._ready_date, parent_ready_date)
+
+    @property
     def file_name(self):
         return self.parent.file_name if self.parent else None
 
@@ -205,8 +215,8 @@ class Node(object):
 
             due_within = match.group('due_within')
             days_before = (int(due_within) if due_within else 1)
-            self.ready_date = (self._due_date -
-                               datetime.timedelta(days=days_before))
+            self._ready_date = (self._due_date -
+                                datetime.timedelta(days=days_before))
             return ''
         except ValueError:
             return match.group(0)
@@ -540,7 +550,7 @@ class DoableNode(Node):
                 self.visible_date, 1)
             self.visible_date = self._interval_boundary_function[unit](
                 self.visible_date, self._recur_subunit_visible, due=False)
-        self.ready_date = self._date_advancing_function[unit](
+        self._ready_date = self._date_advancing_function[unit](
             base_datetime, self._recur_max)
         self._due_date = self._date_advancing_function[unit](
             base_datetime, self._recur_max + 1)

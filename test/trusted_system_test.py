@@ -146,6 +146,9 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
                          FirstTextMatch(next_actions, "^Get section").due_date)
         self.assertEqual(DueDate("2013-07-25"),
                          FirstTextMatch(next_actions, "^Multi-level").due_date)
+        # Don't forget to test that the implicit ready_date gets inherited.
+        self.assertEqual(DueDate("2013-07-24"),
+                         FirstTextMatch(next_actions, "^Multi-lev").ready_date)
 
     def testIgnoreRecurs(self):
         self.addAnonymousFile([

@@ -385,8 +385,8 @@ class DoableNode(Node):
     _recur_unit_pattern = r'(?P<unit>day|week)'
     _recur_min_pattern = r'(?P<min>\d+)'
     _recur_max_pattern = r'(?P<max>\d+)'
-    _recur_subunit_vis_pattern = r'(?P<vis>[^,]+)'
-    _recur_unit_boundary_pattern = r'(?P<due>[^,]+)'
+    _recur_subunit_vis_pattern = r'(?P<vis>[^]]+)'
+    _recur_unit_boundary_pattern = r'(?P<due>[^]]+)'
     _recur_pattern = re.compile(Node._r_start +
                                 r'\s*'.join([
                                     r'EVERY',
@@ -396,7 +396,7 @@ class DoableNode(Node):
                                     # Which units:
                                     r' {}s?'.format(_recur_unit_pattern),
                                     # Which part of the unit:
-                                    r'(\[({}-)?{}\])?'.format(
+                                    r'(\[({} - )?{}\])?'.format(
                                         _recur_subunit_vis_pattern,
                                         _recur_unit_boundary_pattern),
                                 ]) +

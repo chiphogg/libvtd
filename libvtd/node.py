@@ -38,7 +38,7 @@ def PreviousTime(date_and_time, time_string=None, due=True):
     return new_datetime
 
 
-def PreviousWeekday(date_and_time, weekday_string=None, due=True):
+def PreviousWeekDay(date_and_time, weekday_string=None, due=True):
     """The last datetime before 'date_and_time' on the given day of the week.
 
     Args:
@@ -414,7 +414,7 @@ class DoableNode(Node):
     #   b: The boundary of the interval: a string to be parsed.
     _interval_boundary_function = {
         'day': PreviousTime,
-        'week': PreviousWeekday,
+        'week': PreviousWeekDay,
     }
 
     # Functions which advance a datetime by some number of units.

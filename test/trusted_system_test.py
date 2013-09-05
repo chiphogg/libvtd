@@ -94,7 +94,6 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         next_actions = self.trusted_system.NextActions()
         self.assertItemsEqual(["Action which should show up only under 'x'"],
                               [x.text for x in next_actions])
-        # Get the actions; check their priorities... somehow!
 
     def testInheritPriority(self):
         self.addAnonymousFile([

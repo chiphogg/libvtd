@@ -116,7 +116,7 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
 
     def testInheritPriority(self):
         self.addAnonymousFile([
-            "= Section @p:4 @test =",
+            "= Section @p:4 =",
             "",
             "@ Priority 4 task",
             "- Unordered Project @p:2",
@@ -125,7 +125,6 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "# Ordered project (implicit priority 4)",
             "  @ Do ordered project",
         ])
-        self.trusted_system.SetContexts(include=['test'])
         next_actions = self.trusted_system.NextActions()
         self.assertEqual(4, len(next_actions))
         self.assertEqual(0, FirstTextMatch(next_actions, "Pri.*0").priority)
@@ -135,8 +134,6 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
 
     def testInheritDueDate(self):
         self.addAnonymousFile([
-            "= Section @test =",
-            "",
             "@ No due date",
             "",
             "- Project with due date <2013-08-25",
@@ -144,14 +141,13 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "  @ Has own due date <2013-08-23",
             "  @ Use earliest of all due dates <2013-08-27",
             "",
-            "= Section with due date @test <2013-07-25 =",
+            "= Section with due date <2013-07-25 =",
             "",
             "@ Get section's due date",
             "",
             "- Project without explicit due date",
             "  @ Multi-level due date inheritance",
         ])
-        self.trusted_system.SetContexts(include=['test'])
         next_actions = self.trusted_system.NextActions()
         self.assertEqual(6, len(next_actions))
         self.assertIsNone(FirstTextMatch(next_actions, "^No due dat").due_date)
@@ -171,8 +167,6 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
 
     def testInheritVisibleDate(self):
         self.addAnonymousFile([
-            "= Section @test =",
-            "",
             "@ No visible date",
             "",
             "- Project with visible date >2013-08-25",
@@ -180,14 +174,13 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "  @ Has own visible date >2013-08-27",
             "  @ Use latest of all visible dates >2013-08-21",
             "",
-            "= Section with visible date @test >2013-07-25 =",
+            "= Section with visible date >2013-07-25 =",
             "",
             "@ Get section's visible date",
             "",
             "- Project without explicit visible date",
             "  @ Multi-level visible date inheritance",
         ])
-        self.trusted_system.SetContexts(include=['test'])
         next_actions = self.trusted_system.NextActions()
         self.assertEqual(6, len(next_actions))
         self.assertIsNone(FirstTextMatch(next_actions, "^No vis").visible_date)
@@ -204,37 +197,27 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
 
     def testIgnoreRecurs(self):
         self.addAnonymousFile([
-            "= Section @test =",
-            "",
             "@ Regular action",
             "@ Recurring action",
             "  EVERY day",
         ])
-        self.trusted_system.SetContexts(include=['test'])
         self.assertItemsEqual(
             ['Regular action'],
             [x.text for x in self.trusted_system.NextActions()])
 
     def testDone(self):
         self.addAnonymousFile([
-            "= @@Test section =",
-            "",
             "@ Finished action (DONE)",
             "@ Unfinished action",
         ])
-        self.trusted_system.SetContexts(include=['test'])
         self.assertItemsEqual(
             ['Unfinished action'],
             [x.text for x in self.trusted_system.NextActions()])
 
     def testRefresh(self):
-        self.trusted_system.SetContexts(include=['test'])
-
         # First iteration of test file: just one action.
         temp = tempfile.NamedTemporaryFile(delete=False)
         temp.write('\n'.join([
-            "= @@Test section =",
-            "",
             "@ first action"
         ]))
         temp.close()
@@ -311,8 +294,7 @@ class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
 class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
     """Nodes should return a patch to perform various actions."""
     def testDiffToggleTodo(self):
-        self.trusted_system.SetContexts(include=['test'])
-        with TempInput(['@ @@test patches', '']) as file_name:
+        with TempInput(['@ test patches', '']) as file_name:
             self.trusted_system.AddFile(file_name)
             self.assertItemsEqual(
                 ['test patches'],
@@ -341,8 +323,6 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
     def testExplicitBlockers(self):
         self.addAnonymousFile([
-            "= @@Test section =",
-            "",
             "@ Second action @after:firstAction",
             "@ First action #firstAction",
             "",
@@ -354,15 +334,12 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             "- Blocked project @after:firstAction",
             "  @ An action I should not see",
         ])
-        self.trusted_system.SetContexts(include=['test'])
         self.assertItemsEqual(
             ['First action', 'Newly unblocked action', 'Blocker nonexistent'],
             [x.text for x in self.trusted_system.NextActions()])
 
     def testOrderedProjects(self):
         self.addAnonymousFile([
-            "= @@Test section =",
-            "",
             "# Ordered project",
             "   @ First action",
             "   @ Second action",
@@ -375,14 +352,13 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             "    @ Action B",
             "    @ Action C",
         ])
-        self.trusted_system.SetContexts(include=['test'])
         self.assertItemsEqual(
             ['First action', 'Newly-next Action'],
             [x.text for x in self.trusted_system.NextActions()])
 
     def testDoneProjectPruned(self):
         self.addAnonymousFile([
-            "- @@Test project",
+            "- Test project",
             "  - First subproject (DONE 2013-07-20 15:30)",
             "    @ A task for the first subproject",
             "    @ Another such task",
@@ -392,7 +368,6 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             "  - Third subproject (WONTDO)",
             "    @ Something urgent but not important",
         ])
-        self.trusted_system.SetContexts(include=['test'])
         self.assertItemsEqual(
             ['Another second-subproject task'],
             [x.text for x in self.trusted_system.NextActions()])
@@ -445,7 +420,7 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
             "# Project without context.",
             "  @ Should show up",
             "",
-            "= Section with context @test =",
+            "= Section with context @foo =",
             "",
             "# Project with implicit context.",
             "  @ Also should not show up",

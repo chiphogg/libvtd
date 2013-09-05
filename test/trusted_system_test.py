@@ -73,6 +73,25 @@ class TestTrustedSystemBaseClass(unittest.TestCase):
 
 
 class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
+    def testShowAllContextsIfNoneSelected(self):
+        self.addAnonymousFile([
+            "@ Play with kids @home",
+            "@ Do some @@work",
+            "@ @@waiting for package",
+        ])
+
+        # With no contexts included, we should show all (non-excluded) actions.
+        self.trusted_system.SetContexts(exclude=['waiting'])
+        next_actions = self.trusted_system.NextActions()
+        self.assertItemsEqual(['Play with kids', 'Do some work'],
+                              [x.text for x in next_actions])
+
+        # When we include a context, only show actions from that context.
+        self.trusted_system.SetContexts(include=['home'], exclude=['waiting'])
+        next_actions = self.trusted_system.NextActions()
+        self.assertItemsEqual(['Play with kids'],
+                              [x.text for x in next_actions])
+
     def testInheritContext(self):
         self.addAnonymousFile([
             "= Section @test =",

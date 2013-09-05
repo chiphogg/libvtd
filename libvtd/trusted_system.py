@@ -209,7 +209,7 @@ class TrustedSystem:
                 return False
             if any([c == node_context for c in self._contexts_to_include]):
                 node_included = True
-        return node_included
+        return node_included or not self._contexts_to_include
 
     def SetContexts(self, include=None, exclude=None):
         """Set the active contexts for this object.

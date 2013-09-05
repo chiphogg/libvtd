@@ -424,6 +424,8 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
             "",
             "# Project WITH next action",
             "  @ Next action",
+            "",
+            "# Project which is (DONE)",
         ])
         projects = self.trusted_system.ProjectsWithoutNextActions()
         self.assertEqual(2, len(projects))

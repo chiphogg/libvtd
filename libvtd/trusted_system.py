@@ -230,7 +230,7 @@ class TrustedSystem:
         """The list of libvtd.node.Project items which lack Next Actions."""
         def Matcher(x):
             """Specialized matcher for projects without next actions."""
-            if not isinstance(x, libvtd.node.Project):
+            if not isinstance(x, libvtd.node.Project) or x.done:
                 return False
             for child in x.children:
                 if ((isinstance(child, libvtd.node.NextAction)

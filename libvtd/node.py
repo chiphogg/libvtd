@@ -107,7 +107,7 @@ class Node(object):
         # Public properties.
         self.children = []
         self.parent = None
-        self.visible_date = None
+        self._visible_date = None
 
         # Private variables
         self._contexts = []
@@ -179,6 +179,15 @@ class Node(object):
         return min(self._ready_date, parent_ready_date)
 
     @property
+    def visible_date(self):
+        parent_visible_date = self.parent.visible_date if self.parent else None
+        if not self._visible_date:
+            return parent_visible_date
+        if not parent_visible_date:
+            return self._visible_date
+        return max(self._visible_date, parent_visible_date)
+
+    @property
     def file_name(self):
         return self.parent.file_name if self.parent else None
 
@@ -236,7 +245,7 @@ class Node(object):
         try:
             date = datetime.datetime.strptime(match.group('datetime'),
                                               strptime_format)
-            self.visible_date = date
+            self._visible_date = date
             return ''
         except ValueError:
             return match.group(0)
@@ -540,16 +549,16 @@ class DoableNode(Node):
                     base_datetime, -1)
 
         # Set visible, ready, and due dates relative to base_datetime.
-        self.visible_date = self._date_advancing_function[unit](
+        self._visible_date = self._date_advancing_function[unit](
             base_datetime, self._recur_min)
         if self._recur_subunit_visible:
             # Move the visible date forward to the subunit boundary (if any).
             # To do this, move it forward one full unit, then move it back
             # until it matches the visible subunit boundary.
-            self.visible_date = self._date_advancing_function[unit](
-                self.visible_date, 1)
-            self.visible_date = self._interval_boundary_function[unit](
-                self.visible_date, self._recur_subunit_visible, due=False)
+            self._visible_date = self._date_advancing_function[unit](
+                self._visible_date, 1)
+            self._visible_date = self._interval_boundary_function[unit](
+                self._visible_date, self._recur_subunit_visible, due=False)
         self._ready_date = self._date_advancing_function[unit](
             base_datetime, self._recur_max)
         self._due_date = self._date_advancing_function[unit](

@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import itertools
 import os
 import re
@@ -149,6 +150,39 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         # Don't forget to test that the implicit ready_date gets inherited.
         self.assertEqual(DueDate("2013-07-24"),
                          FirstTextMatch(next_actions, "^Multi-lev").ready_date)
+
+    def testInheritVisibleDate(self):
+        self.addAnonymousFile([
+            "= Section @test =",
+            "",
+            "@ No visible date",
+            "",
+            "- Project with visible date >2013-08-25",
+            "  @ Inherits visible date",
+            "  @ Has own visible date >2013-08-27",
+            "  @ Use latest of all visible dates >2013-08-21",
+            "",
+            "= Section with visible date @test >2013-07-25 =",
+            "",
+            "@ Get section's visible date",
+            "",
+            "- Project without explicit visible date",
+            "  @ Multi-level visible date inheritance",
+        ])
+        self.trusted_system.SetContexts(include=['test'])
+        next_actions = self.trusted_system.NextActions()
+        self.assertEqual(6, len(next_actions))
+        self.assertIsNone(FirstTextMatch(next_actions, "^No vis").visible_date)
+        self.assertEqual(datetime.datetime(2013, 8, 25),
+                         FirstTextMatch(next_actions, "^Inherit").visible_date)
+        self.assertEqual(datetime.datetime(2013, 8, 27),
+                         FirstTextMatch(next_actions, "^Has own").visible_date)
+        self.assertEqual(datetime.datetime(2013, 8, 25),
+                         FirstTextMatch(next_actions, "^Use lat").visible_date)
+        self.assertEqual(datetime.datetime(2013, 7, 25),
+                         FirstTextMatch(next_actions, "^Get sec").visible_date)
+        self.assertEqual(datetime.datetime(2013, 7, 25),
+                         FirstTextMatch(next_actions, "^Multi-l").visible_date)
 
     def testIgnoreRecurs(self):
         self.addAnonymousFile([

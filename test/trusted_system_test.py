@@ -372,6 +372,30 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             ['Another second-subproject task'],
             [x.text for x in self.trusted_system.NextActions()])
 
+    def testStubForProjectsWithoutNextActions(self):
+        """Project without NextAction should prompt user."""
+        self.addAnonymousFile([
+            "- Project having subprojects @p:1",
+            "  # First subproject has an action",
+            "    @ (Here it is!)",
+            "  - Second subproject no longer has an action",
+            "    @ Old action (DONE)",
+            "",
+            "- Project to @@ignore even though it lacks NextActions",
+        ])
+        self.trusted_system.SetContexts(exclude=['ignore'])
+        next_actions = self.trusted_system.NextActions()
+        self.assertItemsEqual(
+            ['(Here it is!)', '{MISSING Next Action}'],
+            [x.text for x in next_actions])
+
+        # Checking off the stub should really check off its parent.
+        stub = FirstTextMatch(next_actions, "MISSING")
+        self.assertEqual('Second subproject no longer has an action',
+                         stub.parent.text)
+        self.assertEqual(stub.Patch(libvtd.node.Actions.MarkDONE),
+                         stub.parent.Patch(libvtd.node.Actions.MarkDONE))
+
 
 class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
     """Test "paranoia" features.

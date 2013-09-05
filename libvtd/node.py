@@ -757,6 +757,18 @@ class NextAction(DoableNode, IndentedNode):
         return text
 
 
+class NeedsNextActionStub(NextAction):
+    """A stub to remind the user that a Project needs a NextAction."""
+
+    _stub_text = '{MISSING Next Action}'
+
+    def __init__(self, project, *args, **kwargs):
+        super(NeedsNextActionStub, self).__init__(
+            text=NeedsNextActionStub._stub_text, *args, **kwargs)
+        self.parent = project
+        self._diff_functions[Actions.MarkDONE] = self.parent._PatchMarkDone
+
+
 class Comment(IndentedNode):
 
     _level = NextAction._level + 1

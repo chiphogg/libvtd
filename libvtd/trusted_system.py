@@ -145,6 +145,9 @@ class TrustedSystem:
         matcher = lambda x: self._VisibleNextAction(x) and self._OkContexts(x)
         for file in self._files.values():
             next_actions.extend(self.Collect(node=file, matcher=matcher))
+        for project in self.ProjectsWithoutNextActions():
+            if self._OkContexts(project):
+                next_actions.append(libvtd.node.NeedsNextActionStub(project))
         return next_actions
 
     def NextActionsWithoutContexts(self):

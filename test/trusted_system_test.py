@@ -180,8 +180,11 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "",
             "- Project without explicit visible date",
             "  @ Multi-level visible date inheritance",
+            "",
+            "@ Invisible action >2013-09-05",
         ])
-        next_actions = self.trusted_system.NextActions()
+        now = datetime.datetime(2013, 9, 1)
+        next_actions = self.trusted_system.NextActions(now=now)
         self.assertEqual(6, len(next_actions))
         self.assertIsNone(FirstTextMatch(next_actions, "^No vis").visible_date)
         self.assertEqual(datetime.datetime(2013, 8, 25),

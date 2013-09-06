@@ -57,7 +57,7 @@ class TrustedSystem:
                                                pruner=pruner))
         return match_list
 
-    def ContextList(self):
+    def ContextList(self, now=None):
         """All contexts with visible NextActions, together with a count.
 
         Returns:
@@ -66,8 +66,11 @@ class TrustedSystem:
         """
         contexts = collections.Counter()
 
+        if not now:
+            now = datetime.datetime.now()
+
         def Matcher(node):
-            if self._VisibleNextAction(node):
+            if self._VisibleNextAction(node, now):
                 contexts.update(node.contexts)
             return False
 
@@ -95,7 +98,7 @@ class TrustedSystem:
                 return match
         return None
 
-    def _VisibleNextAction(self, node):
+    def _VisibleNextAction(self, node, now):
         """Check whether node is a NextAction which is currently visible.
 
         (Does not check contexts.)
@@ -107,9 +110,9 @@ class TrustedSystem:
             Boolean indicating whether this is a currently-visible (i.e., apart
             from contexts) NextAction.
         """
-        return self._VisibleAction(node) and not node.recurring
+        return self._VisibleAction(node, now) and not node.recurring
 
-    def _VisibleAction(self, node):
+    def _VisibleAction(self, node, now):
         """Check: node is a currently visible Next or Recurring Action.
 
         (Does not check contexts.)
@@ -122,10 +125,11 @@ class TrustedSystem:
             from contexts) NextAction.
         """
         return (isinstance(node, libvtd.node.NextAction)
+                and node.DateState(now) != libvtd.node.DateStates.invisible
                 and not self._Blocked(node)
                 and not node.done)
 
-    def _VisibleRecurringAction(self, node):
+    def _VisibleRecurringAction(self, node, now):
         """Check whether node is a Recurring Action which is currently visible.
 
         (Does not check contexts.)
@@ -137,16 +141,20 @@ class TrustedSystem:
             Boolean indicating whether this is a currently-visible (i.e., apart
             from contexts) NextAction.
         """
-        return self._VisibleAction(node) and node.recurring
+        return self._VisibleAction(node, now) and node.recurring
 
-    def NextActions(self):
+    def NextActions(self, now=None):
         """A list of next actions currently visible in the given contexts."""
+        if not now:
+            now = datetime.datetime.now()
         next_actions = []
-        matcher = lambda x: self._VisibleNextAction(x) and self._OkContexts(x)
+        matcher = lambda x: \
+            self._VisibleNextAction(x, now) and self._OkContexts(x)
         for file in self._files.values():
             next_actions.extend(self.Collect(node=file, matcher=matcher))
         for project in self.ProjectsWithoutNextActions():
-            if self._OkContexts(project):
+            vis = project.DateState(now) != libvtd.node.DateStates.invisible
+            if vis and self._OkContexts(project):
                 next_actions.append(libvtd.node.NeedsNextActionStub(project))
         return next_actions
 

@@ -158,6 +158,17 @@ class TrustedSystem:
                 next_actions.append(libvtd.node.NeedsNextActionStub(project))
         return next_actions
 
+    def RecurringActions(self, now=None):
+        """A list of recurring actions visible given the current contexts."""
+        if not now:
+            now = datetime.datetime.now()
+        recurs = []
+        matcher = lambda x: (self._VisibleRecurringAction(x, now)
+                             and self._OkContexts(x))
+        for file in self._files.values():
+            recurs.extend(self.Collect(node=file, matcher=matcher))
+        return recurs
+
     def NextActionsWithoutContexts(self):
         """A list of NextActions which don't have a context."""
         next_actions = []

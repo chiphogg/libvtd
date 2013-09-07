@@ -255,6 +255,36 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         os.unlink(temp.name)
 
 
+class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
+    def testRecurs(self):
+        self.addAnonymousFile([
+            "@ Check calendar EVERY day",
+            "  (LASTDONE 2013-09-11 23:04)",  # (Wednesday.)
+            "@ Take out garbage EVERY week [Thu 17:00 - Fri 07:00]",
+            "  (LASTDONE 2013-09-06 07:10)",  # (Friday.)
+            "@ Scrub toilets EVERY 4-6 weeks",
+            "  (LASTDONE 2013-08-16 21:00)",  # (Friday.)
+        ])
+        now = datetime.datetime(2013, 9, 12, 21, 20)  # (Thursday.)
+        recurs = self.trusted_system.RecurringActions(now)
+        self.assertEqual(3, len(recurs))
+        self.assertItemsEqual(
+            ['Check calendar', 'Take out garbage', 'Scrub toilets'],
+            [x.text for x in recurs])
+
+        recur_1 = FirstTextMatch(recurs, "^Check calendar$")
+        self.assertEqual(datetime.datetime(2013, 9, 13), recur_1.due_date)
+        self.assertEqual(libvtd.node.DateStates.due, recur_1.DateState(now))
+
+        recur_2 = FirstTextMatch(recurs, "^Take out garbage$")
+        self.assertEqual(datetime.datetime(2013, 9, 13, 7), recur_2.due_date)
+        self.assertEqual(libvtd.node.DateStates.due, recur_2.DateState(now))
+
+        recur_3 = FirstTextMatch(recurs, "^Scrub toilets$")
+        self.assertEqual(datetime.datetime(2013, 9, 29), recur_3.due_date)
+        self.assertEqual(libvtd.node.DateStates.ready, recur_3.DateState(now))
+
+
 class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
     def testListContexts(self):
         self.addAnonymousFile([

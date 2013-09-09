@@ -108,14 +108,15 @@ def PreviousMonthDay(date_and_time, monthday_string=None, due=True):
                 datetime.timedelta(days=offset - 1))
 
     # Set up the day of the month, and the time of day.
+    time = datetime.time(0, 0)
     try:
         m = re.match(r'(?P<day>-?\d+)(\s+(?P<time>\d\d?:\d\d))?',
                      monthday_string)
-        month_day = m.group('day')
-        time = dateutil.parser.parse(m.group('time')).time()
+        month_day = int(m.group('day'))
+        if m.group('time'):
+            time = dateutil.parser.parse(m.group('time')).time()
     except:
         month_day = 0
-        time = datetime.time(0, 0)
     if due:
         if not monthday_string or not re.search(r'\d:\d\d', monthday_string):
             time = datetime.time(23, 59)

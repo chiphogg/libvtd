@@ -454,3 +454,22 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2013, 10, 31, 23)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2013, 11, 1, 1)))
+
+    def testMonthRecurTrickyDateBoundaries(self):
+        """Check that visible date is start of day; due date is end of day."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Clean out filing cabinets EVERY 4-6 months [4 - 15] ' +
+            '(LASTDONE 2013-09-08 21:00)'))
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 1, 3, 23)))
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         recur.DateState(datetime.datetime(2014, 1, 4, 1)))
+        self.assertEqual(libvtd.node.DateStates.ready,
+                         recur.DateState(datetime.datetime(2014, 2, 15, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2014, 2, 16, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2014, 3, 15, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2014, 3, 16, 1)))

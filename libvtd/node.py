@@ -629,10 +629,10 @@ class DoableNode(Node):
         due_from_start = vis_from_start = True
         if unit == 'month':
             if self._recur_unit_boundary and \
-                    int(self._recur_unit_boundary) < 1:
+                    int(self._recur_unit_boundary.split()[0]) < 1:
                 due_from_start = False
             if self._recur_subunit_visible and \
-                    int(self._recur_subunit_visible) < 1:
+                    int(self._recur_subunit_visible.split()[0]) < 1:
                 vis_from_start = False
 
         # Find the previous datetime (before the last-done time) which bounds

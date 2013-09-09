@@ -488,3 +488,18 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2014, 2, 28, 23)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2014, 3, 1, 1)))
+
+    def testMonthRecurVisibleDueTimes(self):
+        """Monthly recurring tasks with due times/visible times."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Do budget for new month EVERY month [-3 8:00 - 0 18:00] ' +
+            '(LASTDONE 2014-02-08 22:00)'))
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 2, 25, 7)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2014, 2, 25, 9)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2014, 2, 28, 17)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2014, 2, 28, 19)))

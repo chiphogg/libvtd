@@ -298,7 +298,7 @@ class TestRecurringActions(unittest.TestCase):
         """Test action which recurs every day from 5pm to 9am."""
         recur = libvtd.node.NextAction()
         self.assertTrue(recur.AbsorbText(
-            "Pick out clothes EVERY day [17:00-9:00] " +
+            "Pick out clothes EVERY day [17:00 - 9:00] " +
             "(LASTDONE 2013-09-01 08:30)"))
         self.assertEqual("Pick out clothes", recur.text)
         self.assertEqual(libvtd.node.DateStates.invisible,
@@ -387,7 +387,7 @@ class TestRecurringActions(unittest.TestCase):
         """Check that visible date is start of day; due date is end of day."""
         recur = libvtd.node.NextAction()
         self.assertTrue(recur.AbsorbText(
-            'Call parents EVERY 1-2 weeks[Sat-Sun] ' +
+            'Call parents EVERY 1-2 weeks[Sat - Sun] ' +
             '(LASTDONE 2013-09-03 08:30)'))
         self.assertEqual('Call parents', recur.text)
         self.assertEqual(libvtd.node.DateStates.invisible,
@@ -407,7 +407,7 @@ class TestRecurringActions(unittest.TestCase):
         """Weekly recurring action with a custom visible date."""
         recur = libvtd.node.NextAction()
         self.assertTrue(recur.AbsorbText(
-            'Take out garbages EVERY week [Monday 12:00-Tuesday 7:00] ' +
+            'Take out garbages EVERY week [Monday 12:00 - Tuesday 7:00] ' +
             '(LASTDONE 2013-09-09 21:30)'))
         self.assertEqual('Take out garbages', recur.text)
         self.assertEqual(libvtd.node.DateStates.invisible,

@@ -473,3 +473,18 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2014, 3, 15, 23)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2014, 3, 16, 1)))
+
+    def testMonthRecurNegativeDates(self):
+        """Negative dates go from the end of the month."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Do budget for new month EVERY month [-3 - 0] ' +
+            '(LASTDONE 2014-02-08 22:00)'))
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 2, 24, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2014, 2, 25, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2014, 2, 28, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2014, 3, 1, 1)))

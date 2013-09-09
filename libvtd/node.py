@@ -424,9 +424,12 @@ class DoableNode(Node):
     # Args:
     #   d: A datetime to advance.
     #   n: Number of units to advance.
+    #   from_start: Whether to count from the beginning of the unit or the end.
+    #       Only relevant for variable-length units, such as months.
     _date_advancing_function = {
-        'day': lambda d, n: d + datetime.timedelta(days=n),
-        'week': lambda d, n: d + datetime.timedelta(days=7 * n),
+        'day': lambda d, n, from_start: d + datetime.timedelta(days=n),
+        'week': lambda d, n, from_start: d + datetime.timedelta(days=7 * n),
+        'month': AdvanceByMonths
     }
 
     def __init__(self, *args, **kwargs):
@@ -526,6 +529,10 @@ class DoableNode(Node):
         """Set dates (visible, due, etc.) based on last-done date."""
         unit = self._recur_unit
 
+        # For computing the due date and visible date: do we go from the
+        # beginning of the interval, or the end?  (The distinction is only
+        # relevant for variable-length intervals, such as months.)
+        due_from_start = vis_from_start = True
         # Find the previous datetime (before the last-done time) which bounds
         # the time interval (day, week, month, ...).
         base_datetime = self._interval_boundary_function[unit](
@@ -546,23 +553,23 @@ class DoableNode(Node):
             # date.  So, put the base datetime back in the *previous* unit.
             if base_datetime > previous_vis_date:
                 base_datetime = self._date_advancing_function[unit](
-                    base_datetime, -1)
+                    base_datetime, -1, due_from_start)
 
         # Set visible, ready, and due dates relative to base_datetime.
         self._visible_date = self._date_advancing_function[unit](
-            base_datetime, self._recur_min)
+            base_datetime, self._recur_min, vis_from_start)
         if self._recur_subunit_visible:
             # Move the visible date forward to the subunit boundary (if any).
             # To do this, move it forward one full unit, then move it back
             # until it matches the visible subunit boundary.
             self._visible_date = self._date_advancing_function[unit](
-                self._visible_date, 1)
+                self._visible_date, 1, vis_from_start)
             self._visible_date = self._interval_boundary_function[unit](
                 self._visible_date, self._recur_subunit_visible, due=False)
         self._ready_date = self._date_advancing_function[unit](
-            base_datetime, self._recur_max)
+            base_datetime, self._recur_max, due_from_start)
         self._due_date = self._date_advancing_function[unit](
-            base_datetime, self._recur_max + 1)
+            base_datetime, self._recur_max + 1, due_from_start)
 
 
 class File(Node):

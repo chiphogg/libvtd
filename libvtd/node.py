@@ -1,6 +1,7 @@
 import collections
 import datetime
 import dateutil.parser
+import dateutil.relativedelta
 import re
 
 
@@ -71,6 +72,97 @@ def PreviousWeekDay(date_and_time, weekday_string=None, due=True):
             weekday_and_time.time())
     assert new_datetime < date_and_time
     return new_datetime
+
+
+def PreviousMonthDay(date_and_time, monthday_string=None, due=True):
+    """The last datetime before 'date_and_time' on the given day of the month.
+
+    Numbers below 1 are acceptable: 0 is the last day of the previous month, -1
+    is the second-last day, etc.
+
+    Args:
+        date_and_time: A datetime.datetime object.
+        monthday_string: A string representing a day of the month (and
+            optionally, a time).
+        due: Whether this is for a due date (as opposed to a visible date).
+
+    Returns:
+        A datetime.datetime object; the last datetime before 'date_and_time'
+        whose time and day-of-month match 'monthday_string'.
+    """
+    def DayOfMonth(date_and_time, offset):
+        """Date which is 'offset' days from the end of the prior month.
+
+        Args:
+            date_and_time: A datetime.datetime object; only the year and month
+                matters.
+            offset: The number of days to offset from the last day in the
+                previous month.  (So 1 corresponds to the first day of the
+                month; -1 corresponds to the second-to-last day of the previous
+                month; etc.)
+
+        Returns:
+            A datetime.date object for the given day of the month.
+        """
+        return (date_and_time.date().replace(day=1) +
+                datetime.timedelta(days=offset - 1))
+
+    # Set up the day of the month, and the time of day.
+    try:
+        m = re.match(r'(?P<day>-?\d+)(\s+(?P<time>\d\d?:\d\d))?',
+                     monthday_string)
+        month_day = m.group('day')
+        time = dateutil.parser.parse(m.group('time')).time()
+    except:
+        month_day = 0
+        time = datetime.time(0, 0)
+    if due:
+        if not monthday_string or not re.search(r'\d:\d\d', monthday_string):
+            time = datetime.time(23, 59)
+
+    new_datetime = datetime.datetime.combine(
+        DayOfMonth(date_and_time, month_day), time)
+    from_start = (month_day > 0)
+    while new_datetime < date_and_time:
+        new_datetime = AdvanceByMonths(new_datetime, 1, from_start)
+    while new_datetime > date_and_time:
+        new_datetime = AdvanceByMonths(new_datetime, -1, from_start)
+    return new_datetime
+
+
+def AdvanceByMonths(date_and_time, num, from_start):
+    """Advance 'date_and_time' by 'num' months.
+
+    If 'from_start' is false, we count from the end of the month (so, e.g.,
+    March 28 would map to April 27, the fourth-last day of the month in each
+    case).
+
+    Args:
+        date_and_time:  A datetime.datetime object to advance.
+        num:  The number of months to advance it by.
+        from_start:  Boolean indicating whether to count from the start of the
+            month, or the end.
+
+    Returns:
+        datetime.datetime object corresponding to 'date_and_time' advanced by
+        'num' months.
+    """
+    if from_start:
+        return date_and_time + dateutil.relativedelta.relativedelta(months=num)
+
+    # If we're still here, we need to count backwards from the end of the
+    # month.  We do this by computing an offset which takes us to the beginning
+    # of the next month.  Add the offset before changing the month; subtract it
+    # before returning the result.
+    time = date_and_time.time()
+    first_day_next_month = ((date_and_time.date() +
+                             dateutil.relativedelta.relativedelta(months=1))
+                            .replace(day=1))
+    offset = first_day_next_month - date_and_time.date()
+
+    date = (date_and_time.date() + offset +
+            dateutil.relativedelta.relativedelta(months=num)) - offset
+    return datetime.datetime.combine(date, time)
 
 
 class Node(object):
@@ -382,7 +474,7 @@ class DoableNode(Node):
                                     r'\(LASTDONE {}\)'.format(
                                         Node._date_pattern)
                                     + Node._r_end)
-    _recur_unit_pattern = r'(?P<unit>day|week)'
+    _recur_unit_pattern = r'(?P<unit>day|week|month)'
     _recur_min_pattern = r'(?P<min>\d+)'
     _recur_max_pattern = r'(?P<max>\d+)'
     _recur_subunit_vis_pattern = r'(?P<vis>[^]]+)'
@@ -415,6 +507,7 @@ class DoableNode(Node):
     _interval_boundary_function = {
         'day': PreviousTime,
         'week': PreviousWeekDay,
+        'month': PreviousMonthDay,
     }
 
     # Functions which advance a datetime by some number of units.
@@ -533,6 +626,14 @@ class DoableNode(Node):
         # beginning of the interval, or the end?  (The distinction is only
         # relevant for variable-length intervals, such as months.)
         due_from_start = vis_from_start = True
+        if unit == 'month':
+            if self._recur_unit_boundary and \
+                    int(self._recur_unit_boundary) < 1:
+                due_from_start = False
+            if self._recur_subunit_visible and \
+                    int(self._recur_subunit_visible) < 1:
+                vis_from_start = False
+
         # Find the previous datetime (before the last-done time) which bounds
         # the time interval (day, week, month, ...).
         base_datetime = self._interval_boundary_function[unit](

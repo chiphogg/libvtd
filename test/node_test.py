@@ -503,3 +503,18 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2014, 2, 28, 17)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2014, 2, 28, 19)))
+
+    def testMonthRecurVisibleDateDoneLate(self):
+        """Paying the rent late shouldn't skip next month's rent."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            'Pay rent EVERY month [7 - 10] (LASTDONE 2013-09-12 22:00)'))
+        self.assertEqual(libvtd.node.DateStates.invisible,
+                         recur.DateState(datetime.datetime(2013, 10, 6, 23)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 10, 7, 1)))
+        self.assertEqual(libvtd.node.DateStates.due,
+                         recur.DateState(datetime.datetime(2013, 10, 10, 23)))
+        self.assertEqual(libvtd.node.DateStates.late,
+                         recur.DateState(datetime.datetime(2013, 10, 11, 1)))
+

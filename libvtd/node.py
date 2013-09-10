@@ -213,7 +213,7 @@ class Node(object):
 
         # A function which takes no arguments and returns a patch (as from
         # diff).  Default is the identity patch (i.e., the empty string).
-        self._diff_functions = collections.defaultdict(lambda: lambda: '')
+        self._diff_functions = collections.defaultdict(lambda: lambda d: '')
 
     def AddChild(self, other):
         """Add 'other' as a child of 'self' (and 'self' as parent of 'other').
@@ -371,20 +371,24 @@ class Node(object):
         self._priority = int(match.group('priority'))
         return ''
 
-    def Patch(self, action):
+    def Patch(self, action, now=None):
         """A patch to perform the requested action.
 
         Should be applied against this Node's file, if any.
 
         Args:
             action: An element of the libvtd.node.Actions enum.
+            now: datetime.datetime object representing the current timestamp.
+                Defaults to the current time; can be overridden for testing.
 
         Returns:
             A string equivalent to the output of the 'diff' program; when
             applied to the file, it performs the requested action.
         """
         assert action in range(len(Actions))
-        return self._diff_functions[action]()
+        if not now:
+            now = datetime.datetime.now()
+        return self._diff_functions[action](now)
 
     def _CanAbsorbText(self, text):
         """Indicates whether this Node can absorb the given line of text.
@@ -607,8 +611,8 @@ class DoableNode(Node):
         text = self._last_done_pattern.sub(self.ParseLastDone, text)
         return text
 
-    def _PatchMarkDone(self):
-        """A patch which toggles this DoableNode's 'DONE' status."""
+    def _PatchMarkDone(self, now):
+        """A patch which marks this DoableNode as 'DONE'."""
         if not self.done:
             return '\n'.join([
                 '@@ -{0} +{0} @@',
@@ -616,7 +620,7 @@ class DoableNode(Node):
                 '+{1} (DONE {2})',
                 ''
             ]).format(self._line_in_file, self._raw_text[0],
-                      datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))
+                      now.strftime('%Y-%m-%d %H:%M'))
         return ''
 
     def _SetRecurringDates(self):

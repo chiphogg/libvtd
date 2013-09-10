@@ -326,7 +326,8 @@ class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
 
 class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
     """Nodes should return a patch to perform various actions."""
-    def testDiffToggleTodo(self):
+    def testPatchMarkAsDone(self):
+        """Mark a NextAction as DONE."""
         with TempInput(['@ test patches', '']) as file_name:
             self.trusted_system.AddFile(file_name)
             self.assertItemsEqual(

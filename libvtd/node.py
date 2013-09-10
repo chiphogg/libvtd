@@ -628,7 +628,7 @@ class DoableNode(Node):
     def _PatchUpdateLastdone(self, now):
         """A patch which updates a recurring DoableNode's 'LASTDONE' timestamp.
         """
-        if self.done:
+        if self.done or not self.recurring:
             return ''
 
         patch_lines = ['@@ -{0},{1} +{0},{1} @@'.format(self._line_in_file,

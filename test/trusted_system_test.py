@@ -399,6 +399,17 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
                              recur1.DateState(now))
             self.assertEqual(libvtd.node.DateStates.due, recur2.DateState(now))
 
+    def testPatchNextActionUpdateLastdoneIgnoresNonRecurring(self):
+        """Non-recurring actions get ignored by UpdateLASTDONE patches."""
+        with TempInput(['@ One-time action']) as file_name:
+            self.trusted_system.AddFile(file_name)
+            actions = self.trusted_system.NextActions()
+            self.assertEqual(1, len(actions))
+            action = actions[0]
+            self.assertFalse(action.recurring)
+            self.assertEqual('',
+                             action.Patch(libvtd.node.Actions.UpdateLASTDONE))
+
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
     def testExplicitBlockers(self):

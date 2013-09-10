@@ -353,6 +353,52 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
                 ['test patches'],
                 [x.text for x in self.trusted_system.NextActions()])
 
+    def testPatchRecurUpdateLastdone(self):
+        """Update a recurring action's LASTDONE timestamp."""
+        with TempInput([
+            '@ New recurring',
+            '  action EVERY day',
+            '@ Old recurring action EVERY week (LASTDONE 2013-09-01 22:00)',
+            '',
+        ]) as file_name:
+            self.trusted_system.AddFile(file_name)
+            now = datetime.datetime(2013, 9, 10, 8)
+            recurs = self.trusted_system.RecurringActions(now)
+            self.assertItemsEqual(
+                ['New recurring\naction', 'Old recurring action'],
+                [x.text for x in recurs])
+            recur1 = FirstTextMatch(recurs, "^New recurring\naction$")
+            recur2 = FirstTextMatch(recurs, "^Old recurring action$")
+            self.assertEqual(libvtd.node.DateStates.new, recur1.DateState(now))
+            self.assertEqual(libvtd.node.DateStates.due, recur2.DateState(now))
+
+            # Check off both actions and make sure they're no longer visible.
+            for recur in [recur1, recur2]:
+                self.trusted_system.Refresh(force=True)
+                patch = recur.Patch(libvtd.node.Actions.UpdateLASTDONE, now)
+                p = subprocess.Popen('patch {}'.format(file_name),
+                                     shell=True,
+                                     stdin=subprocess.PIPE,
+                                     stderr=subprocess.PIPE,
+                                     stdout=subprocess.PIPE)
+                print 'Patch (stdout, stderr): {}'.format(p.communicate(patch))
+            self.trusted_system.Refresh(force=True)
+            self.assertItemsEqual([],
+                                  [x.text for x in
+                                   self.trusted_system.RecurringActions(now)])
+
+            # Check that both are visible one week later.
+            now = datetime.datetime(2013, 9, 17)
+            recurs = self.trusted_system.RecurringActions(now)
+            self.assertItemsEqual(
+                ['New recurring\naction', 'Old recurring action'],
+                [x.text for x in recurs])
+            recur1 = FirstTextMatch(recurs, "^New recurring\naction$")
+            recur2 = FirstTextMatch(recurs, "^Old recurring action$")
+            self.assertEqual(libvtd.node.DateStates.late,
+                             recur1.DateState(now))
+            self.assertEqual(libvtd.node.DateStates.due, recur2.DateState(now))
+
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
     def testExplicitBlockers(self):

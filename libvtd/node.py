@@ -13,7 +13,7 @@ class _Enum(tuple):
 # 'new' only makes sense for recurring actions.  It represents a recurring
 # action which hasn't been done yet.
 DateStates = _Enum(['new', 'invisible', 'ready', 'due', 'late'])
-Actions = _Enum(['MarkDONE'])
+Actions = _Enum(['MarkDONE', 'UpdateLASTDONE'])
 
 
 def PreviousTime(date_and_time, time_string=None, due=True):
@@ -536,6 +536,8 @@ class DoableNode(Node):
         self.recurring = False
         self.last_done = None
         self._diff_functions[Actions.MarkDONE] = self._PatchMarkDone
+        self._diff_functions[Actions.UpdateLASTDONE] = \
+            self._PatchUpdateLastdone
 
         # A list of ids for DoableNode objects which must be marked DONE before
         # *this* DoableNode will be visible.
@@ -622,6 +624,30 @@ class DoableNode(Node):
             ]).format(self._line_in_file, self._raw_text[0],
                       now.strftime('%Y-%m-%d %H:%M'))
         return ''
+
+    def _PatchUpdateLastdone(self, now):
+        """A patch which updates a recurring DoableNode's 'LASTDONE' timestamp.
+        """
+        if self.done:
+            return ''
+
+        patch_lines = ['@@ -{0},{1} +{0},{1} @@'.format(self._line_in_file,
+                                                        len(self._raw_text))]
+        patch_lines.extend(['-{}'.format(line) for line in self._raw_text])
+
+        current = lambda x=None: now.strftime('%Y-%m-%d %H:%M')
+        updater = lambda m: re.sub(self._date_pattern,
+                                   current,
+                                   m.group(0))
+        for line in self._raw_text:
+            patch_lines.append('+{}'.format(
+                self._last_done_pattern.sub(updater, line)))
+        if self.DateState(now) == DateStates.new:
+            patch_lines[-1] += ' (LASTDONE {})'.format(current())
+        patch_lines.append('')
+
+        print '\n'.join(patch_lines)
+        return '\n'.join(patch_lines)
 
     def _SetRecurringDates(self):
         """Set dates (visible, due, etc.) based on last-done date."""

@@ -327,6 +327,29 @@ class TestTrustedSystemWaiting(TestTrustedSystemBaseClass):
         self.assertEqual(libvtd.node.DateStates.due, waiting_2.DateState(now))
 
 
+class TestTrustedSystemInboxes(TestTrustedSystemBaseClass):
+    def testInboxes(self):
+        """'Inbox' items appear in Inboxes()."""
+        self.addAnonymousFile([
+            "@ @@home @@inbox EVERY 3-5 days",
+            "@ Google Keep @@inbox EVERY day",
+            "  (LASTDONE 2013-09-11 09:30)",
+            "@ Email @@inbox EVERY 2-3 days",
+            "  (LASTDONE 2013-09-11 09:40)",
+        ])
+        now = datetime.datetime(2013, 9, 12, 9, 40)
+        inboxes = self.trusted_system.Inboxes(now)
+        self.assertEqual(2, len(inboxes))
+        self.assertItemsEqual(['home inbox', 'Google Keep inbox'],
+                              [x.text for x in inboxes])
+
+        inbox_1 = FirstTextMatch(inboxes, '^home inbox$')
+        self.assertEqual(libvtd.node.DateStates.new, inbox_1.DateState(now))
+
+        inbox_2 = FirstTextMatch(inboxes, '^Google Keep inbox$')
+        self.assertEqual(libvtd.node.DateStates.due, inbox_2.DateState(now))
+
+
 class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
     def testListContexts(self):
         self.addAnonymousFile([

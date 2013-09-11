@@ -181,6 +181,16 @@ class TrustedSystem:
                                              and not x.contexts))
         return next_actions
 
+    def Inboxes(self, now=None):
+        """List of inboxes to empty."""
+        if not now:
+            now = datetime.datetime.now()
+        inboxes = []
+        inbox_matcher = lambda x: self._VisibleAction(x, now) and x.inbox
+        for file in self._files.values():
+            inboxes.extend(self.Collect(node=file, matcher=inbox_matcher))
+        return inboxes
+
     def Waiting(self, now=None):
         """The GTD 'Waiting For' list."""
         if not now:

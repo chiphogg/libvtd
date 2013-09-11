@@ -646,7 +646,6 @@ class DoableNode(Node):
             patch_lines[-1] += ' (LASTDONE {})'.format(current())
         patch_lines.append('')
 
-        print '\n'.join(patch_lines)
         return '\n'.join(patch_lines)
 
     def _SetRecurringDates(self):

@@ -177,7 +177,6 @@ class TrustedSystem:
                                              isinstance(x,
                                                         libvtd.node.NextAction)
                                              and not x.contexts))
-        print [x.text for x in next_actions]
         return next_actions
 
     def _Blocked(self, node):

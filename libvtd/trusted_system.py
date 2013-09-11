@@ -180,8 +180,10 @@ class TrustedSystem:
                                              and not x.contexts))
         return next_actions
 
-    def Waiting(self, now):
+    def Waiting(self, now=None):
         """The GTD 'Waiting For' list."""
+        if not now:
+            now = datetime.datetime.now()
         waiting = []
         wait_matcher = lambda x: self._VisibleAction(x, now) and x.waiting
         for file in self._files.values():

@@ -193,6 +193,7 @@ class Node(object):
                           r'(?P<context>\w+)' + _r_end)
     _priority_pattern = re.compile(_r_start + r'@p:(?P<priority>[01234])' +
                                    _r_end)
+    _reserved_contexts = ['waiting']
 
     def __init__(self, text, priority, *args, **kwargs):
         super(Node, self).__init__(*args, **kwargs)
@@ -215,6 +216,9 @@ class Node(object):
         # diff).  Default is the identity patch (i.e., the empty string).
         self._diff_functions = collections.defaultdict(lambda: lambda d: '')
 
+        for i in Node._reserved_contexts:
+            setattr(self, i, False)
+
     def AddChild(self, other):
         """Add 'other' as a child of 'self' (and 'self' as parent of 'other').
 
@@ -236,9 +240,15 @@ class Node(object):
 
     def AddContext(self, context, cancel=False):
         """Add context to this Node's contexts list."""
+        canonical_context = context.lower()
+
+        if canonical_context in Node._reserved_contexts:
+            setattr(self, canonical_context, True)
+            return
+
         context_list = self._canceled_contexts if cancel else self._contexts
         if context not in context_list:
-            context_list.append(context.lower())
+            context_list.append(canonical_context)
 
     @property
     def contexts(self):

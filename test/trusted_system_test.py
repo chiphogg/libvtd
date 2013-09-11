@@ -208,6 +208,20 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             ['Regular action'],
             [x.text for x in self.trusted_system.NextActions()])
 
+    def testExcludeWaiting(self):
+        """Actions on the "waiting" list should not be shown."""
+        self.addAnonymousFile([
+            "# Project",
+            "  * Doesn't have a NextAction as such (since it's 'waiting'),",
+            "    but shouldn't show up in ProjectsWithoutNextActions().",
+            "  @ @@waiting for Godot",
+        ])
+
+        self.assertEqual(0, len(self.trusted_system.NextActions()))
+        self.assertEqual(0, len(self.trusted_system.ContextList()))
+        self.assertEqual(0,
+                         len(self.trusted_system.ProjectsWithoutNextActions()))
+
     def testDone(self):
         self.addAnonymousFile([
             "@ Finished action (DONE)",

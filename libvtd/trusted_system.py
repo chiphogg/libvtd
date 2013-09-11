@@ -110,7 +110,8 @@ class TrustedSystem:
             Boolean indicating whether this is a currently-visible (i.e., apart
             from contexts) NextAction.
         """
-        return self._VisibleAction(node, now) and not node.recurring
+        return self._VisibleAction(node, now) and not (node.recurring or
+                                                       node.waiting)
 
     def _VisibleAction(self, node, now):
         """Check: node is a currently visible Next or Recurring Action.

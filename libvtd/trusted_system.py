@@ -180,6 +180,14 @@ class TrustedSystem:
                                              and not x.contexts))
         return next_actions
 
+    def Waiting(self, now):
+        """The GTD 'Waiting For' list."""
+        waiting = []
+        wait_matcher = lambda x: self._VisibleAction(x, now) and x.waiting
+        for file in self._files.values():
+            waiting.extend(self.Collect(node=file, matcher=wait_matcher))
+        return waiting
+
     def _Blocked(self, node):
         """Checks whether the node is blocked.
 

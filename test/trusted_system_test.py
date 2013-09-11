@@ -299,6 +299,27 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
         self.assertEqual(libvtd.node.DateStates.ready, recur_3.DateState(now))
 
 
+class TestTrustedSystemWaiting(TestTrustedSystemBaseClass):
+    def testWaiting(self):
+        """'Waiting' items appear in Waiting()."""
+        self.addAnonymousFile([
+            "@ @@Waiting for Godot",
+            "@ Get code review @waiting <2013-10-10(30)",
+            "@ @waiting Good GTD system in vim",
+            "  (DONE 2013-10-01 01:23)",
+            "@ Invisible @@waiting item >2013-10-10"
+        ])
+        now = datetime.datetime(2013, 10, 1, 9, 40)
+        waiting = self.trusted_system.Waiting(now)
+
+        self.assertEqual(2, len(waiting))
+        self.assertItemsEqual(['Waiting for Godot', 'Get code review'],
+                              [x.text for x in waiting])
+
+        waiting_2 = FirstTextMatch(waiting, "^Get code review$")
+        self.assertEqual(libvtd.node.DateStates.due, waiting_2.DateState(now))
+
+
 class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
     def testListContexts(self):
         self.addAnonymousFile([

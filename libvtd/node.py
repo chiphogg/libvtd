@@ -193,7 +193,7 @@ class Node(object):
                           r'(?P<context>\w+)' + _r_end)
     _priority_pattern = re.compile(_r_start + r'@p:(?P<priority>[01234])' +
                                    _r_end)
-    _reserved_contexts = ['waiting']
+    _reserved_contexts = ['inbox', 'waiting']
 
     def __init__(self, text, priority, *args, **kwargs):
         super(Node, self).__init__(*args, **kwargs)

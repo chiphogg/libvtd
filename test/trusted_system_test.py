@@ -298,6 +298,13 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
         self.assertEqual(datetime.datetime(2013, 9, 29), recur_3.due_date)
         self.assertEqual(libvtd.node.DateStates.ready, recur_3.DateState(now))
 
+    def testExcludeInboxes(self):
+        """Actions on the "inbox" list should not be shown."""
+        self.addAnonymousFile([
+            "@ Empty @@home @@inbox EVERY 3-5 days",
+        ])
+        self.assertEqual(0, len(self.trusted_system.RecurringActions()))
+
 
 class TestTrustedSystemWaiting(TestTrustedSystemBaseClass):
     def testWaiting(self):

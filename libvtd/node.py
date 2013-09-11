@@ -649,13 +649,14 @@ class DoableNode(Node):
         updater = lambda m: re.sub(self._date_pattern,
                                    current,
                                    m.group(0))
-        for line in self._raw_text:
-            patch_lines.append('+{}'.format(
-                self._last_done_pattern.sub(updater, line)))
-        if self.DateState(now) == DateStates.new:
-            patch_lines[-1] += ' (LASTDONE {})'.format(current())
-        patch_lines.append('')
 
+        new_lines = ['+{}'.format(self._last_done_pattern.sub(updater, line))
+                     for line in self._raw_text]
+        if self.DateState(now) == DateStates.new:
+            new_lines[0] += ' (LASTDONE {})'.format(current())
+        patch_lines.extend(new_lines)
+
+        patch_lines.append('')
         return '\n'.join(patch_lines)
 
     def _SetRecurringDates(self):

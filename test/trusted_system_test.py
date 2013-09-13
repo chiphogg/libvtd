@@ -336,8 +336,10 @@ class TestTrustedSystemInboxes(TestTrustedSystemBaseClass):
             "  (LASTDONE 2013-09-11 09:30)",
             "@ Email @@inbox EVERY 2-3 days",
             "  (LASTDONE 2013-09-11 09:40)",
+            "@ @@work @@inbox EVERY 3-7 days",
         ])
         now = datetime.datetime(2013, 9, 12, 9, 40)
+        self.trusted_system.SetContexts(exclude=['work'])
         inboxes = self.trusted_system.Inboxes(now)
         self.assertEqual(2, len(inboxes))
         self.assertItemsEqual(['home inbox', 'Google Keep inbox'],

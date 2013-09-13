@@ -186,7 +186,8 @@ class TrustedSystem:
         if not now:
             now = datetime.datetime.now()
         inboxes = []
-        inbox_matcher = lambda x: self._VisibleAction(x, now) and x.inbox
+        inbox_matcher = lambda x: (self._VisibleAction(x, now) and x.inbox and
+                                   self._OkContexts(x))
         for file in self._files.values():
             inboxes.extend(self.Collect(node=file, matcher=inbox_matcher))
         return inboxes

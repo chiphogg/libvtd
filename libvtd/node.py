@@ -12,7 +12,7 @@ class _Enum(tuple):
 
 # 'new' only makes sense for recurring actions.  It represents a recurring
 # action which hasn't been done yet.
-DateStates = _Enum(['new', 'invisible', 'ready', 'due', 'late'])
+DateStates = _Enum(['invisible', 'ready', 'due', 'new', 'late'])
 Actions = _Enum(['MarkDONE', 'UpdateLASTDONE'])
 
 

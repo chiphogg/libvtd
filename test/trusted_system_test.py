@@ -540,11 +540,15 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             "    @ Old action (DONE)",
             "",
             "- Project to @@ignore even though it lacks NextActions",
+            "",
+            "# Test that blocked projects don't get stubs",
+            "  @ First action",
+            "  # Subproject",
         ])
         self.trusted_system.SetContexts(exclude=['ignore'])
         next_actions = self.trusted_system.NextActions()
         self.assertItemsEqual(
-            ['(Here it is!)', '{MISSING Next Action}'],
+            ['(Here it is!)', '{MISSING Next Action}', 'First action'],
             [x.text for x in next_actions])
 
         # Checking off the stub should really check off its parent.

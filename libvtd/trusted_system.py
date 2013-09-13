@@ -155,7 +155,8 @@ class TrustedSystem:
         for file in self._files.values():
             next_actions.extend(self.Collect(node=file, matcher=matcher))
         for project in self.ProjectsWithoutNextActions():
-            vis = project.DateState(now) != libvtd.node.DateStates.invisible
+            vis = (project.DateState(now) != libvtd.node.DateStates.invisible
+                   and not self._Blocked(project))
             if vis and self._OkContexts(project):
                 next_actions.append(libvtd.node.NeedsNextActionStub(project))
         return next_actions

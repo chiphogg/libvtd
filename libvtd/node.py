@@ -13,7 +13,7 @@ class _Enum(tuple):
 # 'new' only makes sense for recurring actions.  It represents a recurring
 # action which hasn't been done yet.
 DateStates = _Enum(['invisible', 'ready', 'due', 'new', 'late'])
-Actions = _Enum(['MarkDONE', 'UpdateLASTDONE'])
+Actions = _Enum(['MarkDONE', 'UpdateLASTDONE', 'DefaultCheckoff'])
 
 
 def PreviousTime(date_and_time, time_string=None, due=True):
@@ -548,6 +548,7 @@ class DoableNode(Node):
         self._diff_functions[Actions.MarkDONE] = self._PatchMarkDone
         self._diff_functions[Actions.UpdateLASTDONE] = \
             self._PatchUpdateLastdone
+        self._diff_functions[Actions.DefaultCheckoff] = self._PatchMarkDone
 
         # A list of ids for DoableNode objects which must be marked DONE before
         # *this* DoableNode will be visible.
@@ -604,6 +605,8 @@ class DoableNode(Node):
 
     def ParseRecur(self, match):
         self.recurring = True
+        self._diff_functions[Actions.DefaultCheckoff] = \
+            self._PatchUpdateLastdone
         self._recur_max = int(match.group('max')) if match.group('max') else 1
         self._recur_min = int(match.group('min')) if match.group('min') else \
             self._recur_max

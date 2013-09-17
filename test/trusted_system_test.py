@@ -477,6 +477,31 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
             self.assertEqual('',
                              action.Patch(libvtd.node.Actions.UpdateLASTDONE))
 
+    def testPatchDefaultCheckoff(self):
+        """Mark non-recurring actions as DONE; update LASTDONE if recurring."""
+        now = datetime.datetime(2013, 10, 31, 17, 30)
+        with TempInput([
+            '@ One-time action',
+            '@ Do this EVERY day',
+        ]) as file_name:
+            self.trusted_system.AddFile(file_name)
+
+            # Non-recurring action should be marked DONE.
+            actions = self.trusted_system.NextActions()
+            self.assertEqual(1, len(actions))
+            self.assertFalse(actions[0].recurring)
+            self.assertRegexpMatches(
+                actions[0].Patch(libvtd.node.Actions.DefaultCheckoff, now),
+                r'\(DONE 2013-10-31 17:30\)')
+
+            # Recurring action should get its LASTDONE timestamp updated.
+            actions = self.trusted_system.RecurringActions()
+            self.assertEqual(1, len(actions))
+            self.assertTrue(actions[0].recurring)
+            self.assertRegexpMatches(
+                actions[0].Patch(libvtd.node.Actions.DefaultCheckoff, now),
+                r'\(LASTDONE 2013-10-31 17:30\)')
+
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
     def testExplicitBlockers(self):

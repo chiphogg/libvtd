@@ -918,7 +918,7 @@ class NeedsNextActionStub(NextAction):
         super(NeedsNextActionStub, self).__init__(
             text=NeedsNextActionStub._stub_text, *args, **kwargs)
         self.parent = project
-        self._diff_functions[Actions.MarkDONE] = self.parent._PatchMarkDone
+        self.Patch = lambda action, now=None: self.parent.Patch(action, now)
 
 
 class Comment(IndentedNode):

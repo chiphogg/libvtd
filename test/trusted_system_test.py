@@ -582,6 +582,9 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
                          stub.parent.text)
         self.assertEqual(stub.Patch(libvtd.node.Actions.MarkDONE),
                          stub.parent.Patch(libvtd.node.Actions.MarkDONE))
+        self.assertEqual(stub.Patch(libvtd.node.Actions.DefaultCheckoff),
+                         stub.parent.Patch(
+                             libvtd.node.Actions.DefaultCheckoff))
 
 
 class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):

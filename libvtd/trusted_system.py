@@ -70,7 +70,7 @@ class TrustedSystem:
             now = datetime.datetime.now()
 
         def Matcher(node):
-            if self._VisibleNextAction(node, now):
+            if self._VisibleAction(node, now) and not node.waiting:
                 contexts.update(node.contexts)
             return False
 

@@ -357,7 +357,8 @@ class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
         self.addAnonymousFile([
             "@ E.T. @@phone @@home",                # home, phone
             "@ Go @@home",                          # home
-            "@ @@Work harder",                      # work
+            "@ @@Waiting for a @@phone call",       # Don't include waiting
+            "@ @@Work harder EVERY day",            # work
             "@ @@Phone @@Mom and @@Dad",            # dad, mom, phone
             "@ Wash the dishes @home",              # home
             "# Ordered @@work project",

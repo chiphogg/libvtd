@@ -302,6 +302,19 @@ class Node(object):
             now = datetime.datetime.now()
         return self._diff_functions[action](now)
 
+    def Source(self):
+        """The source which generated this Node.
+
+        Typically, this would be a file name and a line number.  If other Node
+        types get added later, this could be a URL (say, for a GitHub issue).
+
+        Returns:
+            A (file name, line number) tuple.  (The return type could change in
+            the future.)
+        """
+        line = self._line_in_file if '_line_in_file' in self.__dict__ else 1
+        return (self.file_name, line)
+
     @property
     def contexts(self):
         context_list = list(self._contexts)

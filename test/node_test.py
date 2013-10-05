@@ -2,6 +2,8 @@ import copy
 import datetime
 import unittest
 
+import libvtd_test
+
 import libvtd.node
 
 
@@ -253,6 +255,25 @@ class TestFile(unittest.TestCase):
         self.assertEqual(2, action.indent)
         self.assertEqual(1, action.priority)
         self.assertEqual(15, action.minutes)
+
+    def testFileLineNumbers(self):
+        with libvtd_test.TempInput([
+            '= Section =',
+            '',
+            '# Project',
+            '  @ Action',
+        ]) as file_name:
+            file = libvtd.node.File(file_name)
+            self.assertTupleEqual((file_name, 1), file.Source())
+
+            section = file.children[0]
+            self.assertTupleEqual((file_name, 1), section.Source())
+
+            project = section.children[0]
+            self.assertTupleEqual((file_name, 3), project.Source())
+
+            action = project.children[0]
+            self.assertTupleEqual((file_name, 4), action.Source())
 
 
 class TestRecurringActions(unittest.TestCase):
@@ -517,4 +538,3 @@ class TestRecurringActions(unittest.TestCase):
                          recur.DateState(datetime.datetime(2013, 10, 10, 23)))
         self.assertEqual(libvtd.node.DateStates.late,
                          recur.DateState(datetime.datetime(2013, 10, 11, 1)))
-

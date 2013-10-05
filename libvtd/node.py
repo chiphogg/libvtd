@@ -771,6 +771,23 @@ class File(Node):
         except TypeError:
             print 'Dummy file (no file name supplied).'
 
+    @staticmethod
+    def CreateNodeFromLine(line, line_num=1):
+        """Create the specific type of Node which this line represents.
+
+        Args:
+            line: A line of text.
+
+        Returns:
+            An instance of a Node subclass, or None if this line doesn't
+            represent a valid Node.
+        """
+        (new_node, text) = File._CreateCorrectNodeType(line)
+        if new_node:
+            new_node.AbsorbText(text, line)
+            new_node._line_in_file = line_num
+        return new_node
+
     @property
     def file_name(self):
         return self._file_name
@@ -817,23 +834,6 @@ class File(Node):
 
     def _CanAbsorbText(self, unused_text):
         return False
-
-    @staticmethod
-    def CreateNodeFromLine(line, line_num=1):
-        """Create the specific type of Node which this line represents.
-
-        Args:
-            line: A line of text.
-
-        Returns:
-            An instance of a Node subclass, or None if this line doesn't
-            represent a valid Node.
-        """
-        (new_node, text) = File._CreateCorrectNodeType(line)
-        if new_node:
-            new_node.AbsorbText(text, line)
-            new_node._line_in_file = line_num
-        return new_node
 
 
 class Section(Node):

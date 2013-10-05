@@ -1,65 +1,14 @@
-import contextlib
 import datetime
 import itertools
 import os
-import re
 import subprocess
 import tempfile
 import unittest
 
+import libvtd_test
+
 import libvtd.node
 import libvtd.trusted_system
-
-###############################################################################
-# Helper functions
-
-
-@contextlib.contextmanager
-def TempInput(data):
-    temp = tempfile.NamedTemporaryFile(delete=False)
-    temp.write('\n'.join(data))
-    temp.close()
-    yield temp.name
-    os.unlink(temp.name)
-
-
-def FirstTextMatch(node_list, search_regex):
-    """Find the first Node in node_list which matches search_regex.
-
-    Args:
-        node_list: A container of Node objects.
-        search_regex: A regular expression to match with the Node object.
-
-    Returns:
-        The first Node object in node_list which matches search_regex, or None
-        if none were found.
-    """
-    regex = re.compile(search_regex)
-    for node in node_list:
-        if regex.search(node.text):
-            return node
-    return None
-
-
-def DueDate(date_string):
-    """Parse date_string into a VTD due date, using the VTD machinery.
-
-    This is handy because date-only due dates, such as "2013-08-25", get parsed
-    into end-of-day due times.  We don't want to worry about whether it's
-    "2013-08-25 23:59:59", "2013-08-25 23:59", or even something else.
-
-    Args:
-        date_string: A string which a VTD Node would recognize as a date/time.
-
-    Returns:
-        A datetime.datetime object giving the equivalent VTD due date.
-    """
-    node = libvtd.node.NextAction()
-    node.AbsorbText('<{}'.format(date_string))
-    return node.due_date
-
-###############################################################################
-# Test code
 
 
 class TestTrustedSystemBaseClass(unittest.TestCase):
@@ -68,7 +17,7 @@ class TestTrustedSystemBaseClass(unittest.TestCase):
         self.trusted_system = libvtd.trusted_system.TrustedSystem()
 
     def addAnonymousFile(self, data):
-        with TempInput(data) as file_name:
+        with libvtd_test.TempInput(data) as file_name:
             self.trusted_system.AddFile(file_name)
 
 
@@ -127,10 +76,14 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         ])
         next_actions = self.trusted_system.NextActions()
         self.assertEqual(4, len(next_actions))
-        self.assertEqual(0, FirstTextMatch(next_actions, "Pri.*0").priority)
-        self.assertEqual(2, FirstTextMatch(next_actions, "Pri.*2").priority)
-        self.assertEqual(4, FirstTextMatch(next_actions, "Pri.*4").priority)
-        self.assertEqual(4, FirstTextMatch(next_actions, "Do ord").priority)
+        self.assertEqual(0, libvtd_test.FirstTextMatch(next_actions,
+                                                       "Priority 0").priority)
+        self.assertEqual(2, libvtd_test.FirstTextMatch(next_actions,
+                                                       "Priority 2").priority)
+        self.assertEqual(4, libvtd_test.FirstTextMatch(next_actions,
+                                                       "Priority 4").priority)
+        self.assertEqual(4, libvtd_test.FirstTextMatch(next_actions,
+                                                       "Do ordered").priority)
 
     def testInheritDueDate(self):
         self.addAnonymousFile([
@@ -150,20 +103,27 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         ])
         next_actions = self.trusted_system.NextActions()
         self.assertEqual(6, len(next_actions))
-        self.assertIsNone(FirstTextMatch(next_actions, "^No due dat").due_date)
-        self.assertEqual(DueDate("2013-08-25"),
-                         FirstTextMatch(next_actions, "^Inherits du").due_date)
-        self.assertEqual(DueDate("2013-08-23"),
-                         FirstTextMatch(next_actions, "^Has own due").due_date)
-        self.assertEqual(DueDate("2013-08-25"),
-                         FirstTextMatch(next_actions, "^Use earlies").due_date)
-        self.assertEqual(DueDate("2013-07-25"),
-                         FirstTextMatch(next_actions, "^Get section").due_date)
-        self.assertEqual(DueDate("2013-07-25"),
-                         FirstTextMatch(next_actions, "^Multi-level").due_date)
+        self.assertIsNone(libvtd_test.FirstTextMatch(next_actions,
+                                                     "^No due date$").due_date)
+        self.assertEqual(libvtd_test.DueDate("2013-08-25"),
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Inherits due").due_date)
+        self.assertEqual(libvtd_test.DueDate("2013-08-23"),
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Has own due").due_date)
+        self.assertEqual(libvtd_test.DueDate("2013-08-25"),
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Use earliest").due_date)
+        self.assertEqual(libvtd_test.DueDate("2013-07-25"),
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Get section").due_date)
+        self.assertEqual(libvtd_test.DueDate("2013-07-25"),
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Multi-level").due_date)
         # Don't forget to test that the implicit ready_date gets inherited.
-        self.assertEqual(DueDate("2013-07-24"),
-                         FirstTextMatch(next_actions, "^Multi-lev").ready_date)
+        self.assertEqual(libvtd_test.DueDate("2013-07-24"),
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Multi-level").ready_date)
 
     def testInheritVisibleDate(self):
         self.addAnonymousFile([
@@ -186,17 +146,23 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         now = datetime.datetime(2013, 9, 1)
         next_actions = self.trusted_system.NextActions(now=now)
         self.assertEqual(6, len(next_actions))
-        self.assertIsNone(FirstTextMatch(next_actions, "^No vis").visible_date)
+        self.assertIsNone(libvtd_test.FirstTextMatch(next_actions,
+                                                     "^No visib").visible_date)
         self.assertEqual(datetime.datetime(2013, 8, 25),
-                         FirstTextMatch(next_actions, "^Inherit").visible_date)
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Inherits ").visible_date)
         self.assertEqual(datetime.datetime(2013, 8, 27),
-                         FirstTextMatch(next_actions, "^Has own").visible_date)
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Has own v").visible_date)
         self.assertEqual(datetime.datetime(2013, 8, 25),
-                         FirstTextMatch(next_actions, "^Use lat").visible_date)
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Use lates").visible_date)
         self.assertEqual(datetime.datetime(2013, 7, 25),
-                         FirstTextMatch(next_actions, "^Get sec").visible_date)
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Get secti").visible_date)
         self.assertEqual(datetime.datetime(2013, 7, 25),
-                         FirstTextMatch(next_actions, "^Multi-l").visible_date)
+                         libvtd_test.FirstTextMatch(next_actions,
+                                                    "^Multi-lev").visible_date)
 
     def testIgnoreRecurs(self):
         self.addAnonymousFile([
@@ -286,15 +252,15 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
             ['Check calendar', 'Take out garbage', 'Scrub toilets'],
             [x.text for x in recurs])
 
-        recur_1 = FirstTextMatch(recurs, "^Check calendar$")
+        recur_1 = libvtd_test.FirstTextMatch(recurs, "^Check calendar$")
         self.assertEqual(datetime.datetime(2013, 9, 13), recur_1.due_date)
         self.assertEqual(libvtd.node.DateStates.due, recur_1.DateState(now))
 
-        recur_2 = FirstTextMatch(recurs, "^Take out garbage$")
+        recur_2 = libvtd_test.FirstTextMatch(recurs, "^Take out garbage$")
         self.assertEqual(datetime.datetime(2013, 9, 13, 7), recur_2.due_date)
         self.assertEqual(libvtd.node.DateStates.due, recur_2.DateState(now))
 
-        recur_3 = FirstTextMatch(recurs, "^Scrub toilets$")
+        recur_3 = libvtd_test.FirstTextMatch(recurs, "^Scrub toilets$")
         self.assertEqual(datetime.datetime(2013, 9, 29), recur_3.due_date)
         self.assertEqual(libvtd.node.DateStates.ready, recur_3.DateState(now))
 
@@ -323,7 +289,7 @@ class TestTrustedSystemWaiting(TestTrustedSystemBaseClass):
         self.assertItemsEqual(['Waiting for Godot', 'Get code review'],
                               [x.text for x in waiting])
 
-        waiting_2 = FirstTextMatch(waiting, "^Get code review$")
+        waiting_2 = libvtd_test.FirstTextMatch(waiting, "^Get code review$")
         self.assertEqual(libvtd.node.DateStates.due, waiting_2.DateState(now))
 
 
@@ -345,10 +311,10 @@ class TestTrustedSystemInboxes(TestTrustedSystemBaseClass):
         self.assertItemsEqual(['home inbox', 'Google Keep inbox'],
                               [x.text for x in inboxes])
 
-        inbox_1 = FirstTextMatch(inboxes, '^home inbox$')
+        inbox_1 = libvtd_test.FirstTextMatch(inboxes, '^home inbox$')
         self.assertEqual(libvtd.node.DateStates.new, inbox_1.DateState(now))
 
-        inbox_2 = FirstTextMatch(inboxes, '^Google Keep inbox$')
+        inbox_2 = libvtd_test.FirstTextMatch(inboxes, '^Google Keep inbox$')
         self.assertEqual(libvtd.node.DateStates.due, inbox_2.DateState(now))
 
 
@@ -396,12 +362,13 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
     """Nodes should return a patch to perform various actions."""
     def testPatchMarkAsDone(self):
         """Mark a NextAction as DONE."""
-        with TempInput(['@ test patches', '']) as file_name:
+        with libvtd_test.TempInput(['@ test patches', '']) as file_name:
             self.trusted_system.AddFile(file_name)
             self.assertItemsEqual(
                 ['test patches'],
                 [x.text for x in self.trusted_system.NextActions()])
-            action = FirstTextMatch(self.trusted_system.NextActions(), "^test")
+            action = libvtd_test.FirstTextMatch(
+                self.trusted_system.NextActions(), "^test")
 
             # Get and apply the patch to check this off as DONE.
             patch = action.Patch(libvtd.node.Actions.MarkDONE)
@@ -423,7 +390,7 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
 
     def testPatchRecurUpdateLastdone(self):
         """Update a recurring action's LASTDONE timestamp."""
-        with TempInput([
+        with libvtd_test.TempInput([
             '@ New recurring',
             '  action EVERY day',
             '@ Old recurring action EVERY week (LASTDONE 2013-09-01 22:00)',
@@ -435,8 +402,8 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
             self.assertItemsEqual(
                 ['New recurring\naction', 'Old recurring action'],
                 [x.text for x in recurs])
-            recur1 = FirstTextMatch(recurs, "^New recurring\naction$")
-            recur2 = FirstTextMatch(recurs, "^Old recurring action$")
+            recur1 = libvtd_test.FirstTextMatch(recurs, "^New recurring\nacti")
+            recur2 = libvtd_test.FirstTextMatch(recurs, "^Old recurring actio")
             self.assertEqual(libvtd.node.DateStates.new, recur1.DateState(now))
             self.assertEqual(libvtd.node.DateStates.due, recur2.DateState(now))
 
@@ -461,15 +428,15 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
             self.assertItemsEqual(
                 ['New recurring\naction', 'Old recurring action'],
                 [x.text for x in recurs])
-            recur1 = FirstTextMatch(recurs, "^New recurring\naction$")
-            recur2 = FirstTextMatch(recurs, "^Old recurring action$")
+            recur1 = libvtd_test.FirstTextMatch(recurs, "^New recurring\nacti")
+            recur2 = libvtd_test.FirstTextMatch(recurs, "^Old recurring actio")
             self.assertEqual(libvtd.node.DateStates.late,
                              recur1.DateState(now))
             self.assertEqual(libvtd.node.DateStates.due, recur2.DateState(now))
 
     def testPatchNextActionUpdateLastdoneIgnoresNonRecurring(self):
         """Non-recurring actions get ignored by UpdateLASTDONE patches."""
-        with TempInput(['@ One-time action']) as file_name:
+        with libvtd_test.TempInput(['@ One-time action']) as file_name:
             self.trusted_system.AddFile(file_name)
             actions = self.trusted_system.NextActions()
             self.assertEqual(1, len(actions))
@@ -481,7 +448,7 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
     def testPatchDefaultCheckoff(self):
         """Mark non-recurring actions as DONE; update LASTDONE if recurring."""
         now = datetime.datetime(2013, 10, 31, 17, 30)
-        with TempInput([
+        with libvtd_test.TempInput([
             '@ One-time action',
             '@ Do this EVERY day',
         ]) as file_name:
@@ -578,7 +545,7 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             [x.text for x in next_actions])
 
         # Checking off the stub should really check off its parent.
-        stub = FirstTextMatch(next_actions, "MISSING")
+        stub = libvtd_test.FirstTextMatch(next_actions, "MISSING")
         self.assertEqual('Second subproject no longer has an action',
                          stub.parent.text)
         self.assertEqual(stub.Patch(libvtd.node.Actions.MarkDONE),

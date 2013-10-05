@@ -219,6 +219,38 @@ class Node(object):
         for i in Node._reserved_contexts:
             setattr(self, i, False)
 
+    def AbsorbText(self, text, raw_text=None):
+        """Strip out special sequences and add whatever's left to the text.
+
+        "Special sequences" include sequences which *every* Node type is
+        allowed to have: visible-dates, due-dates, contexts,
+        priorities, etc.
+
+        Args:
+            text: The text to parse and add.
+
+        Returns:
+            A boolean indicating success.  Note that if it returns False, this
+            Node must be in the same state as it was before the function was
+            called.
+        """
+        if not self._CanAbsorbText(text):
+            return False
+        self._raw_text.append(raw_text if raw_text else text)
+
+        # Tokens which are common to all Node instances: due date;
+        # visible-after date; contexts; priority.
+        text = self._due_date_pattern.sub(self._ParseDueDate, text)
+        text = self._vis_date_pattern.sub(self._ParseVisDate, text)
+        text = self._context.sub(self._ParseContext, text)
+        text = self._priority_pattern.sub(self._ParsePriority, text)
+
+        # Optional extra parsing and stripping for subclasses.
+        text = self._ParseSpecializedTokens(text)
+
+        self._text = (self._text + '\n' if self._text else '') + text.strip()
+        return True
+
     def AddChild(self, other):
         """Add 'other' as a child of 'self' (and 'self' as parent of 'other').
 
@@ -228,15 +260,11 @@ class Node(object):
         Returns:
             A boolean indicating success.
         """
-        if not self.CanContain(other):
+        if not self._CanContain(other):
             return False
         other.parent = self
         self.children.append(other)
         return True
-
-    def CanContain(self, other):
-        return self._level < other._level or (self._level == other._level and
-                                              self._can_nest_same_type)
 
     def AddContext(self, context, cancel=False):
         """Add context to this Node's contexts list."""
@@ -250,18 +278,36 @@ class Node(object):
         if context not in context_list:
             context_list.append(canonical_context)
 
+    def DebugName(self):
+        old_name = ('{} :: '.format(self.parent.DebugName()) if self.parent
+                    else '')
+        return '{}[{}] {}'.format(old_name, self.__class__.__name__, self.text)
+
+    def Patch(self, action, now=None):
+        """A patch to perform the requested action.
+
+        Should be applied against this Node's file, if any.
+
+        Args:
+            action: An element of the libvtd.node.Actions enum.
+            now: datetime.datetime object representing the current timestamp.
+                Defaults to the current time; can be overridden for testing.
+
+        Returns:
+            A string equivalent to the output of the 'diff' program; when
+            applied to the file, it performs the requested action.
+        """
+        assert action in range(len(Actions))
+        if not now:
+            now = datetime.datetime.now()
+        return self._diff_functions[action](now)
+
     @property
     def contexts(self):
         context_list = list(self._contexts)
         if self.parent:
             context_list.extend(self.parent.contexts)
         return [c for c in context_list if c not in self._canceled_contexts]
-
-    @property
-    def priority(self):
-        if self._priority is not None:
-            return self._priority
-        return self.parent.priority if self.parent else None
 
     @property
     def due_date(self):
@@ -273,6 +319,16 @@ class Node(object):
         return min(self._due_date, parent_due_date)
 
     @property
+    def file_name(self):
+        return self.parent.file_name if self.parent else None
+
+    @property
+    def priority(self):
+        if self._priority is not None:
+            return self._priority
+        return self.parent.priority if self.parent else None
+
+    @property
     def ready_date(self):
         parent_ready_date = self.parent.ready_date if self.parent else None
         if not self._ready_date:
@@ -280,6 +336,10 @@ class Node(object):
         if not parent_ready_date:
             return self._ready_date
         return min(self._ready_date, parent_ready_date)
+
+    @property
+    def text(self):
+        return self._text.strip()
 
     @property
     def visible_date(self):
@@ -290,20 +350,35 @@ class Node(object):
             return self._visible_date
         return max(self._visible_date, parent_visible_date)
 
-    @property
-    def file_name(self):
-        return self.parent.file_name if self.parent else None
+    def _CanAbsorbText(self, text):
+        """Indicates whether this Node can absorb the given line of text.
 
-    @property
-    def text(self):
-        return self._text.strip()
+        The default is to absorb only if there is no pre-existing text;
+        subclasses may specialize this behaviour.
+        """
+        return not self._text
 
-    def DebugName(self):
-        old_name = ('{} :: '.format(self.parent.DebugName()) if self.parent
-                    else '')
-        return '{}[{}] {}'.format(old_name, self.__class__.__name__, self.text)
+    def _CanContain(self, other):
+        return self._level < other._level or (self._level == other._level and
+                                              self._can_nest_same_type)
 
-    def ParseDueDate(self, match):
+    def _ParseContext(self, match):
+        """Parses the context from a match object.
+
+        Args:
+            match: A match from the self._context regex.
+
+        Returns:
+            The text to replace match with.  If successful, this should be
+            either the empty string, or (for @@-prefixed contexts) the bare
+            context name; else, the original text.
+        """
+        cancel = (match.group('cancel') == '!')
+        self.AddContext(match.group('context'), cancel=cancel)
+        return (' ' + match.group('context') if match.group('prefix') == '@@'
+                else '')
+
+    def _ParseDueDate(self, match):
         """Parses the due date from a match object.
 
         Args:
@@ -333,7 +408,27 @@ class Node(object):
         except ValueError:
             return match.group(0)
 
-    def ParseVisDate(self, match):
+    def _ParsePriority(self, match):
+        """Parses the priority from a match object.
+
+        Args:
+            match: A match from the self._priority_pattern regex.
+
+        Returns:
+            The text to replace match with, i.e., the empty string.
+        """
+        self._priority = int(match.group('priority'))
+        return ''
+
+    def _ParseSpecializedTokens(self, text):
+        """Parse tokens which only make sense for a particular subclass.
+
+        For example, a field for the time it takes to complete a task only
+        makes sense for the NextAction subclass.
+        """
+        return text
+
+    def _ParseVisDate(self, match):
         """Parses the visible-after date from a match object.
 
         Args:
@@ -353,101 +448,6 @@ class Node(object):
         except ValueError:
             return match.group(0)
 
-    def ParseContext(self, match):
-        """Parses the context from a match object.
-
-        Args:
-            match: A match from the self._context regex.
-
-        Returns:
-            The text to replace match with.  If successful, this should be
-            either the empty string, or (for @@-prefixed contexts) the bare
-            context name; else, the original text.
-        """
-        cancel = (match.group('cancel') == '!')
-        self.AddContext(match.group('context'), cancel=cancel)
-        return (' ' + match.group('context') if match.group('prefix') == '@@'
-                else '')
-
-    def ParsePriority(self, match):
-        """Parses the priority from a match object.
-
-        Args:
-            match: A match from the self._priority_pattern regex.
-
-        Returns:
-            The text to replace match with, i.e., the empty string.
-        """
-        self._priority = int(match.group('priority'))
-        return ''
-
-    def Patch(self, action, now=None):
-        """A patch to perform the requested action.
-
-        Should be applied against this Node's file, if any.
-
-        Args:
-            action: An element of the libvtd.node.Actions enum.
-            now: datetime.datetime object representing the current timestamp.
-                Defaults to the current time; can be overridden for testing.
-
-        Returns:
-            A string equivalent to the output of the 'diff' program; when
-            applied to the file, it performs the requested action.
-        """
-        assert action in range(len(Actions))
-        if not now:
-            now = datetime.datetime.now()
-        return self._diff_functions[action](now)
-
-    def _CanAbsorbText(self, text):
-        """Indicates whether this Node can absorb the given line of text.
-
-        The default is to absorb only if there is no pre-existing text;
-        subclasses may specialize this behaviour.
-        """
-        return not self._text
-
-    def AbsorbText(self, text, raw_text=None):
-        """Strip out special sequences and add whatever's left to the text.
-
-        "Special sequences" include sequences which *every* Node type is
-        allowed to have: visible-dates, due-dates, contexts,
-        priorities, etc.
-
-        Args:
-            text: The text to parse and add.
-
-        Returns:
-            A boolean indicating success.  Note that if it returns False, this
-            Node must be in the same state as it was before the function was
-            called.
-        """
-        if not self._CanAbsorbText(text):
-            return False
-        self._raw_text.append(raw_text if raw_text else text)
-
-        # Tokens which are common to all Node instances: due date;
-        # visible-after date; contexts; priority.
-        text = self._due_date_pattern.sub(self.ParseDueDate, text)
-        text = self._vis_date_pattern.sub(self.ParseVisDate, text)
-        text = self._context.sub(self.ParseContext, text)
-        text = self._priority_pattern.sub(self.ParsePriority, text)
-
-        # Optional extra parsing and stripping for subclasses.
-        text = self._ParseSpecializedTokens(text)
-
-        self._text = (self._text + '\n' if self._text else '') + text.strip()
-        return True
-
-    def _ParseSpecializedTokens(self, text):
-        """Parse tokens which only make sense for a particular subclass.
-
-        For example, a field for the time it takes to complete a task only
-        makes sense for the NextAction subclass.
-        """
-        return text
-
 
 class IndentedNode(Node):
     """A Node which supports multiple lines, at a given level of indentation.
@@ -458,9 +458,9 @@ class IndentedNode(Node):
         self.indent = indent
         self.text_indent = indent + 2
 
-    def CanContain(self, other):
-        return super(IndentedNode, self).CanContain(other) and (self.indent <
-                                                                other.indent)
+    def _CanContain(self, other):
+        return super(IndentedNode, self)._CanContain(other) and (self.indent <
+                                                                 other.indent)
 
     def _CanAbsorbText(self, text):
         # If we have no text, don't worry about checking indenting.
@@ -582,19 +582,19 @@ class DoableNode(Node):
             return DateStates.due
         return DateStates.ready
 
-    def ParseAfter(self, match):
+    def _ParseAfter(self, match):
         self.blockers.extend([match.group('id')])
         return ''
 
-    def ParseDone(self, match):
+    def _ParseDone(self, match):
         self.done = True
         return ''
 
-    def ParseId(self, match):
+    def _ParseId(self, match):
         self.ids.extend([match.group('id')])
         return ''
 
-    def ParseLastDone(self, match):
+    def _ParseLastDone(self, match):
         try:
             last_done = datetime.datetime.strptime(match.group('datetime'),
                                                    self._datetime_format)
@@ -603,7 +603,7 @@ class DoableNode(Node):
         except ValueError:
             return match.group(0)
 
-    def ParseRecur(self, match):
+    def _ParseRecur(self, match):
         self.recurring = True
         self._diff_functions[Actions.DefaultCheckoff] = \
             self._PatchUpdateLastdone
@@ -619,11 +619,11 @@ class DoableNode(Node):
         """Parse tokens specific to indented blocks.
         """
         text = super(DoableNode, self)._ParseSpecializedTokens(text)
-        text = self._done_pattern.sub(self.ParseDone, text)
-        text = self._id_pattern.sub(self.ParseId, text)
-        text = self._after_pattern.sub(self.ParseAfter, text)
-        text = self._recur_pattern.sub(self.ParseRecur, text)
-        text = self._last_done_pattern.sub(self.ParseLastDone, text)
+        text = self._done_pattern.sub(self._ParseDone, text)
+        text = self._id_pattern.sub(self._ParseId, text)
+        text = self._after_pattern.sub(self._ParseAfter, text)
+        text = self._recur_pattern.sub(self._ParseRecur, text)
+        text = self._last_done_pattern.sub(self._ParseLastDone, text)
         return text
 
     def _PatchMarkDone(self, now):
@@ -846,10 +846,10 @@ class Section(Node):
                                       **kwargs)
         self.level = level
 
-    def CanContain(self, other):
+    def _CanContain(self, other):
         if issubclass(other.__class__, Section):
             return self.level < other.level
-        return super(Section, self).CanContain(other)
+        return super(Section, self)._CanContain(other)
 
 
 class Project(DoableNode, IndentedNode):
@@ -889,7 +889,7 @@ class NextAction(DoableNode, IndentedNode):
         super(NextAction, self).__init__(text=text, priority=priority, *args,
                                          **kwargs)
 
-    def ParseTime(self, match):
+    def _ParseTime(self, match):
         """Parses the time from a match object.
 
         Args:
@@ -905,7 +905,7 @@ class NextAction(DoableNode, IndentedNode):
         """Parse NextAction-specific tokens.
         """
         text = super(NextAction, self)._ParseSpecializedTokens(text)
-        text = self._time.sub(self.ParseTime, text)
+        text = self._time.sub(self._ParseTime, text)
         return text
 
 

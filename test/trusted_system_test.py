@@ -548,6 +548,7 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
         stub = libvtd_test.FirstTextMatch(next_actions, "MISSING")
         self.assertEqual('Second subproject no longer has an action',
                          stub.parent.text)
+        self.assertTupleEqual(stub.Source(), stub.parent.Source())
         self.assertEqual(stub.Patch(libvtd.node.Actions.MarkDONE),
                          stub.parent.Patch(libvtd.node.Actions.MarkDONE))
         self.assertEqual(stub.Patch(libvtd.node.Actions.DefaultCheckoff),

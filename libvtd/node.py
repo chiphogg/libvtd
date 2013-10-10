@@ -932,6 +932,7 @@ class NeedsNextActionStub(NextAction):
             text=NeedsNextActionStub._stub_text, *args, **kwargs)
         self.parent = project
         self.Patch = lambda action, now=None: self.parent.Patch(action, now)
+        self.Source = lambda: self.parent.Source()
 
 
 class Comment(IndentedNode):

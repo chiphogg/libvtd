@@ -617,6 +617,7 @@ class DoableNode(Node):
             return match.group(0)
 
     def _ParseRecur(self, match):
+        self._recur_raw_string = match
         self.recurring = True
         self._diff_functions[Actions.DefaultCheckoff] = \
             self._PatchUpdateLastdone
@@ -889,6 +890,9 @@ class Project(DoableNode, IndentedNode):
                 if last_doable_node and last_doable_node != other:
                     temp_id = last_doable_node.ids[0]
                     other.blockers.extend([temp_id])
+
+            if self.recurring and isinstance(other, DoableNode):
+                other._ParseRecur(self._recur_raw_string)
             return True
         return False
 

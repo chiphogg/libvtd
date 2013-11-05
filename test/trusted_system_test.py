@@ -271,6 +271,29 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
         ])
         self.assertEqual(0, len(self.trusted_system.RecurringActions()))
 
+    def testUnorderedRecurringProjects(self):
+        """Inherit recurrence information; separate LASTDONE information."""
+        self.addAnonymousFile([
+            "- Change passwords EVERY 2 months",
+            "  @ Google (LASTDONE 2013-11-04 06:00)",
+            "  @ Facebook",
+            "  @ Bank (LASTDONE 2013-10-28 11:00)",
+        ])
+        now = datetime.datetime(2014, 1, 3)
+        recurs = self.trusted_system.RecurringActions(now)
+        self.assertEqual(3, len(recurs))
+        self.assertItemsEqual(['Google', 'Facebook', 'Bank'],
+                              [x.text for x in recurs])
+
+        recur_1 = libvtd_test.FirstTextMatch(recurs, "^Google$")
+        self.assertEqual(libvtd.node.DateStates.due, recur_1.DateState(now))
+
+        recur_2 = libvtd_test.FirstTextMatch(recurs, "^Facebook$")
+        self.assertEqual(libvtd.node.DateStates.new, recur_2.DateState(now))
+
+        recur_3 = libvtd_test.FirstTextMatch(recurs, "^Bank$")
+        self.assertEqual(libvtd.node.DateStates.late, recur_3.DateState(now))
+
 
 class TestTrustedSystemWaiting(TestTrustedSystemBaseClass):
     def testWaiting(self):

@@ -348,6 +348,7 @@ class TestTrustedSystemAll(TestTrustedSystemBaseClass):
             "@ @@home @@inbox EVERY 3-5 days",
             "@ Check calendar EVERY day",
             "@ Walk the dog",
+            "@ @@Waiting for Godot",
         ])
         now = datetime.datetime(2013, 9, 12, 9, 40)
         all = self.trusted_system.AllActions(now)

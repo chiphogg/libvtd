@@ -199,7 +199,7 @@ class TrustedSystem:
             now = datetime.datetime.now()
         all_actions = []
         all_matcher = lambda x: (self._VisibleAction(x, now) and
-                                 self._OkContexts(x))
+                                 self._OkContexts(x) and not x.waiting)
         for file in self._files.values():
             all_actions.extend(self.Collect(node=file, matcher=all_matcher))
         return all_actions

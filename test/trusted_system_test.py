@@ -341,6 +341,21 @@ class TestTrustedSystemInboxes(TestTrustedSystemBaseClass):
         self.assertEqual(libvtd.node.DateStates.due, inbox_2.DateState(now))
 
 
+class TestTrustedSystemAll(TestTrustedSystemBaseClass):
+    def testAll(self):
+        """'All' combines NextActions, Inboxes, and RecurringActions."""
+        self.addAnonymousFile([
+            "@ @@home @@inbox EVERY 3-5 days",
+            "@ Check calendar EVERY day",
+            "@ Walk the dog",
+        ])
+        now = datetime.datetime(2013, 9, 12, 9, 40)
+        all = self.trusted_system.AllActions(now)
+        self.assertEqual(3, len(all))
+        self.assertItemsEqual(['home inbox', 'Check calendar', 'Walk the dog'],
+                              [x.text for x in all])
+
+
 class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
     def testListContexts(self):
         self.addAnonymousFile([

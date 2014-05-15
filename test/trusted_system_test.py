@@ -244,12 +244,15 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
             "  (LASTDONE 2013-09-06 07:10)",  # (Friday.)
             "@ Scrub toilets EVERY 4-6 weeks",
             "  (LASTDONE 2013-08-16 21:00)",  # (Friday.)
+            "@ Fix obscure boundary bug EVERY day [09:00]",
+            "  (LASTDONE 2013-09-12 09:00)",
         ])
         now = datetime.datetime(2013, 9, 12, 21, 20)  # (Thursday.)
         recurs = self.trusted_system.RecurringActions(now)
-        self.assertEqual(3, len(recurs))
+        self.assertEqual(4, len(recurs))
         self.assertItemsEqual(
-            ['Check calendar', 'Take out garbage', 'Scrub toilets'],
+            ['Check calendar', 'Take out garbage', 'Scrub toilets',
+             'Fix obscure boundary bug'],
             [x.text for x in recurs])
 
         recur_1 = libvtd_test.FirstTextMatch(recurs, "^Check calendar$")
@@ -263,6 +266,10 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
         recur_3 = libvtd_test.FirstTextMatch(recurs, "^Scrub toilets$")
         self.assertEqual(datetime.datetime(2013, 9, 29), recur_3.due_date)
         self.assertEqual(libvtd.node.DateStates.ready, recur_3.DateState(now))
+
+        recur_4 = libvtd_test.FirstTextMatch(recurs, "^Fix obscure boundary.*")
+        self.assertEqual(datetime.datetime(2013, 9, 13, 9), recur_4.due_date)
+        self.assertEqual(libvtd.node.DateStates.due, recur_4.DateState(now))
 
     def testExcludeInboxes(self):
         """Actions on the "inbox" list should not be shown."""

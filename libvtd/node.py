@@ -275,7 +275,7 @@ class Node(object):
             return
 
         context_list = self._canceled_contexts if cancel else self._contexts
-        if context not in context_list:
+        if canonical_context not in context_list:
             context_list.append(canonical_context)
 
     def DebugName(self):

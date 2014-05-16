@@ -51,6 +51,7 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "  @ Inherited action",
             "- Project which cancels context @!test @x",
             "  @ Action which should show up only under 'x'",
+            "@ Action which cancels all inheritance @!",
         ])
         # Check @test actions
         self.trusted_system.SetContexts(include=['test'])
@@ -61,6 +62,12 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         self.trusted_system.SetContexts(include=['x'])
         next_actions = self.trusted_system.NextActions()
         self.assertItemsEqual(["Action which should show up only under 'x'"],
+                              [x.text for x in next_actions])
+
+        # Test ability to cancel all inheritance with '@!'.
+        self.trusted_system.SetContexts(include=[], exclude=['test', 'x'])
+        next_actions = self.trusted_system.NextActions()
+        self.assertItemsEqual(["Action which cancels all inheritance"],
                               [x.text for x in next_actions])
 
     def testInheritPriority(self):

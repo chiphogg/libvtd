@@ -191,6 +191,7 @@ class Node(object):
     _vis_date_pattern = re.compile(_r_start + r'>' + _date_pattern + _r_end)
     _context = re.compile(_r_start + r'(?P<prefix>@{1,2})(?P<cancel>!?)' +
                           r'(?P<context>\w+)' + _r_end)
+    _cancel_inheritance = re.compile(_r_start + r'@!' + _r_end)
     _priority_pattern = re.compile(_r_start + r'@p:(?P<priority>[01234])' +
                                    _r_end)
     _reserved_contexts = ['inbox', 'waiting']
@@ -206,6 +207,7 @@ class Node(object):
         # Private variables
         self._contexts = []
         self._canceled_contexts = []
+        self._cancel_inheriting_all_contexts = False
         self._due_date = None
         self._ready_date = None
         self._priority = priority
@@ -243,6 +245,7 @@ class Node(object):
         text = self._due_date_pattern.sub(self._ParseDueDate, text)
         text = self._vis_date_pattern.sub(self._ParseVisDate, text)
         text = self._context.sub(self._ParseContext, text)
+        text = self._cancel_inheritance.sub(self._ParseCancelInheritance, text)
         text = self._priority_pattern.sub(self._ParsePriority, text)
 
         # Optional extra parsing and stripping for subclasses.
@@ -318,7 +321,7 @@ class Node(object):
     @property
     def contexts(self):
         context_list = list(self._contexts)
-        if self.parent:
+        if self.parent and not self._cancel_inheriting_all_contexts:
             context_list.extend(self.parent.contexts)
         return [c for c in context_list if c not in self._canceled_contexts]
 
@@ -390,6 +393,18 @@ class Node(object):
         self.AddContext(match.group('context'), cancel=cancel)
         return (' ' + match.group('context') if match.group('prefix') == '@@'
                 else '')
+
+    def _ParseCancelInheritance(self, match):
+        """Cancels inheritance of contexts from parents.
+
+        Args:
+            match: A match from the self._context regex.
+
+        Returns:
+            The text to replace match with: in this case, the empty string.
+        """
+        self._cancel_inheriting_all_contexts = True
+        return ''
 
     def _ParseDueDate(self, match):
         """Parses the due date from a match object.

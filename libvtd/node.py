@@ -772,6 +772,7 @@ class File(Node):
         super(File, self).__init__(text='', priority=None, *args, **kwargs)
         self.bad_lines = []
         self._file_name = file_name
+        self._node_with_id = {}
 
         try:
             # Read file contents and create a tree of Nodes from them.
@@ -795,6 +796,10 @@ class File(Node):
                     else:
                         if not previous_node.AbsorbText(raw_text):
                             self.bad_lines.append((line_num, raw_text))
+                    try:
+                        self._TrackIdNode(previous_node)
+                    except KeyError:
+                        self.bad_lines.append((line_num, raw_text))
         except IOError:
             print 'Warning: file ''{}'' does not exist.'.format(file_name)
         except TypeError:
@@ -863,6 +868,32 @@ class File(Node):
 
     def _CanAbsorbText(self, unused_text):
         return False
+
+    def _TrackIdNode(self, node):
+        """If this node has an ID, add it to the (id -> node) map.
+
+        Args:
+            node: A libvtd.node.Node object.
+        """
+        try:
+            for id in node.ids:
+                if id in self._node_with_id.keys():
+                    if self._node_with_id[id] != node:
+                        raise KeyError
+                else:
+                    self._node_with_id[id] = node
+        except AttributeError:
+            return
+
+    def NodeWithId(self, id):
+        """The child node of this flie with the given ID (None if none).
+
+        Args:
+            id: A string indicating which node to retrieve.
+        """
+        if id not in self._node_with_id.keys():
+            return None
+        return self._node_with_id[id]
 
 
 class Section(Node):

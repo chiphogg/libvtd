@@ -126,9 +126,9 @@ class TrustedSystem:
             from contexts) NextAction.
         """
         return (isinstance(node, libvtd.node.NextAction)
+                and not node.done
                 and node.DateState(now) != libvtd.node.DateStates.invisible
-                and not self._Blocked(node)
-                and not node.done)
+                and not self._Blocked(node))
 
     def _VisibleRecurringAction(self, node, now):
         """Check whether node is a Recurring Action which is currently visible.

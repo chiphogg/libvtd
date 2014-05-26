@@ -32,30 +32,29 @@ class TrustedSystem:
                 self._files[file_name] = libvtd.node.File(file_name)
         self.last_refreshed = float(datetime.datetime.now().strftime('%s.%f'))
 
-    def Collect(self, node, matcher,
+    def Collect(self, match_list, node, matcher,
                 pruner=lambda x: 'done' in x.__dict__ and x.done):
-        """Gather Nodes from node and its children which fulfil some criteria.
+        """Gather Nodes from node and its children which fulfil some criteria
+        into match_list.
 
         Args:
+            match_list: A list which is passed around the call stack and
+                extended as we find more elements.
             node: A Node object (presumably from within a tree in the
                 TrustedSystem).
             matcher: A function which decides whether node should be added to
                 the collection.
             pruner: A function which decides whether node's children should be
                 explored; defaults to no pruning.
-
-        Returns:
-            A sequence of Node objects, from node and its children, which
-            match.
         """
-        if not node:
-            return []
-        match_list = [node] if matcher(node) else []
         if not pruner(node):
             for child in node.children:
-                match_list.extend(self.Collect(child, matcher=matcher,
-                                               pruner=pruner))
-        return match_list
+                self.Collect(match_list=match_list,
+                             node=child,
+                             matcher=matcher,
+                             pruner=pruner)
+        if matcher(node):
+            match_list.append(node)
 
     def ContextList(self, now=None):
         """All contexts with visible NextActions, together with a count.
@@ -74,8 +73,9 @@ class TrustedSystem:
                 contexts.update(node.contexts)
             return False
 
+        match_list = []
         for file in self._files.values():
-            self.Collect(node=file, matcher=Matcher)
+            self.Collect(match_list=match_list, node=file, matcher=Matcher)
 
         return contexts.most_common()
 
@@ -153,7 +153,7 @@ class TrustedSystem:
         matcher = lambda x: \
             self._VisibleNextAction(x, now) and self._OkContexts(x)
         for file in self._files.values():
-            next_actions.extend(self.Collect(node=file, matcher=matcher))
+            self.Collect(match_list=next_actions, node=file, matcher=matcher)
         for project in self.ProjectsWithoutNextActions():
             vis = (project.DateState(now) != libvtd.node.DateStates.invisible
                    and not self._Blocked(project))
@@ -169,17 +169,18 @@ class TrustedSystem:
         matcher = lambda x: (self._VisibleRecurringAction(x, now)
                              and self._OkContexts(x))
         for file in self._files.values():
-            recurs.extend(self.Collect(node=file, matcher=matcher))
+            self.Collect(match_list=recurs, node=file, matcher=matcher)
         return recurs
 
     def NextActionsWithoutContexts(self):
         """A list of NextActions which don't have a context."""
         next_actions = []
         for file in self._files.values():
-            next_actions.extend(self.Collect(node=file, matcher=lambda x:
-                                             isinstance(x,
-                                                        libvtd.node.NextAction)
-                                             and not x.contexts))
+            self.Collect(match_list=next_actions,
+                         node=file,
+                         matcher=lambda x:
+                             isinstance(x, libvtd.node.NextAction)
+                             and not x.contexts)
         return next_actions
 
     def Inboxes(self, now=None):
@@ -190,7 +191,7 @@ class TrustedSystem:
         inbox_matcher = lambda x: (self._VisibleAction(x, now) and x.inbox and
                                    self._OkContexts(x))
         for file in self._files.values():
-            inboxes.extend(self.Collect(node=file, matcher=inbox_matcher))
+            self.Collect(match_list=inboxes, node=file, matcher=inbox_matcher)
         return inboxes
 
     def AllActions(self, now=None):
@@ -201,7 +202,9 @@ class TrustedSystem:
         all_matcher = lambda x: (self._VisibleAction(x, now) and
                                  self._OkContexts(x) and not x.waiting)
         for file in self._files.values():
-            all_actions.extend(self.Collect(node=file, matcher=all_matcher))
+            self.Collect(match_list=all_actions,
+                         node=file,
+                         matcher=all_matcher)
         return all_actions
 
     def Waiting(self, now=None):
@@ -211,7 +214,7 @@ class TrustedSystem:
         waiting = []
         wait_matcher = lambda x: self._VisibleAction(x, now) and x.waiting
         for file in self._files.values():
-            waiting.extend(self.Collect(node=file, matcher=wait_matcher))
+            self.Collect(match_list=waiting, node=file, matcher=wait_matcher)
         return waiting
 
     def _Blocked(self, node):
@@ -294,5 +297,5 @@ class TrustedSystem:
 
         projects = []
         for file in self._files.values():
-            projects.extend(self.Collect(node=file, matcher=Matcher))
+            self.Collect(match_list=projects, node=file, matcher=Matcher)
         return projects

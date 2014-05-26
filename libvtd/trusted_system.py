@@ -79,25 +79,6 @@ class TrustedSystem:
 
         return contexts.most_common()
 
-    def FindFirstNode(self, node, matcher):
-        """Find Node N where matcher(N) is True, from node and its children.
-
-        Args:
-            node: A Node object to search.
-            matcher: A function accepting a Node which defines what we're
-                looking for.
-
-        Returns:
-            The first Node to match.
-        """
-        if matcher(node):
-            return node
-        for child in node.children:
-            match = self.FindFirstNode(child, matcher)
-            if match:
-                return match
-        return None
-
     def _VisibleNextAction(self, node, now):
         """Check whether node is a NextAction which is currently visible.
 
@@ -247,7 +228,8 @@ class TrustedSystem:
                 return False
 
         for file in self._files.values():
-            if self.FindFirstNode(node=file, matcher=Matcher):
+            node = file.NodeWithId(id)
+            if node and not node.done:
                 return True
 
         return False

@@ -139,10 +139,11 @@ class TrustedSystem:
         if not now:
             now = datetime.datetime.now()
         next_actions = []
-        matcher = lambda x: \
-            self._VisibleNextAction(x, now) and self._OkContexts(x)
         for file in self._files.values():
-            self.Collect(match_list=next_actions, node=file, matcher=matcher)
+            self.Collect(match_list=next_actions, node=file, matcher=lambda x:
+                         self._VisibleNextAction(x, now)
+                         and self._OkContexts(x))
+
         for project in self.ProjectsWithoutNextActions():
             vis = (project.DateState(now) != libvtd.node.DateStates.invisible
                    and not self._Blocked(project))
@@ -155,10 +156,10 @@ class TrustedSystem:
         if not now:
             now = datetime.datetime.now()
         recurs = []
-        matcher = lambda x: (self._VisibleRecurringAction(x, now)
-                             and self._OkContexts(x))
         for file in self._files.values():
-            self.Collect(match_list=recurs, node=file, matcher=matcher)
+            self.Collect(match_list=recurs, node=file, matcher=lambda x:
+                         self._VisibleRecurringAction(x, now)
+                         and self._OkContexts(x))
         return recurs
 
     def NextActionsWithoutContexts(self):
@@ -177,10 +178,10 @@ class TrustedSystem:
         if not now:
             now = datetime.datetime.now()
         inboxes = []
-        inbox_matcher = lambda x: (self._VisibleAction(x, now) and x.inbox and
-                                   self._OkContexts(x))
         for file in self._files.values():
-            self.Collect(match_list=inboxes, node=file, matcher=inbox_matcher)
+            self.Collect(match_list=inboxes, node=file, matcher=lambda x:
+                         self._VisibleAction(x, now)
+                         and x.inbox and self._OkContexts(x))
         return inboxes
 
     def AllActions(self, now=None):
@@ -188,12 +189,12 @@ class TrustedSystem:
         if not now:
             now = datetime.datetime.now()
         all_actions = []
-        all_matcher = lambda x: (self._VisibleAction(x, now) and
-                                 self._OkContexts(x) and not x.waiting)
         for file in self._files.values():
             self.Collect(match_list=all_actions,
                          node=file,
-                         matcher=all_matcher)
+                         matcher=lambda x: (self._VisibleAction(x, now)
+                                            and self._OkContexts(x)
+                                            and not x.waiting))
         return all_actions
 
     def Waiting(self, now=None):
@@ -201,9 +202,9 @@ class TrustedSystem:
         if not now:
             now = datetime.datetime.now()
         waiting = []
-        wait_matcher = lambda x: self._VisibleAction(x, now) and x.waiting
         for file in self._files.values():
-            self.Collect(match_list=waiting, node=file, matcher=wait_matcher)
+            self.Collect(match_list=waiting, node=file, matcher=lambda x:
+                         self._VisibleAction(x, now) and x.waiting)
         return waiting
 
     def _Blocked(self, node):

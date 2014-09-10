@@ -25,6 +25,14 @@ class TrustedSystem:
         self.Refresh()
         self._files[file_name] = libvtd.node.File(file_name)
 
+    def ClearFiles(self):
+        """Clear the list of files (basically emptying the system).
+
+        Also Refresh()es the system, so stale tasks aren't hanging around.
+        """
+        self._files.clear()
+        self.Refresh()
+
     def Refresh(self, force=False):
         """Reread any files updated since the last Refresh()."""
         for file_name in self._files.keys():

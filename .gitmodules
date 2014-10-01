@@ -1,0 +1,3 @@
+[submodule "third_party/dateutil"]
+	path = third_party/dateutil
+	url = https://github.com/paxan/python-dateutil.git

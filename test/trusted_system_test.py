@@ -448,24 +448,33 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
             action = libvtd_test.FirstTextMatch(
                 self.trusted_system.NextActions(), "^test")
 
-            # Get and apply the patch to check this off as DONE.
-            patch = action.Patch(libvtd.node.Actions.MarkDONE)
-            DEVNULL = open('/dev/null', 'w')
-            subprocess.Popen('patch {}'.format(action.file_name),
-                             shell=True, stdout=DEVNULL, stdin=subprocess.PIPE
-                             ).communicate(patch.encode())
-            self.trusted_system.Refresh(force=True)
-            six.assertCountEqual(self, [], self.trusted_system.NextActions())
+            with open('/dev/null', 'w') as DEVNULL:
+                # Get and apply the patch to check this off as DONE.
+                patch = action.Patch(libvtd.node.Actions.MarkDONE)
+                subprocess.Popen(
+                        'patch {}'.format(action.file_name),
+                        shell=True,
+                        stdout=DEVNULL,
+                        stdin=subprocess.PIPE,
+                        ).communicate(patch.encode())
+                self.trusted_system.Refresh(force=True)
+                six.assertCountEqual(
+                        self,
+                        [],
+                        self.trusted_system.NextActions())
 
-            # Apply the patch in reverse; the action should reappear.
-            subprocess.Popen('patch -R {}'.format(action.file_name),
-                             shell=True, stdout=DEVNULL,
-                             stdin=subprocess.PIPE).communicate(patch.encode())
-            self.trusted_system.Refresh(force=True)
-            six.assertCountEqual(
-                    self, 
-                    ['test patches'],
-                    [x.text for x in self.trusted_system.NextActions()])
+                # Apply the patch in reverse; the action should reappear.
+                subprocess.Popen(
+                        'patch -R {}'.format(action.file_name),
+                        shell=True,
+                        stdout=DEVNULL,
+                        stdin=subprocess.PIPE,
+                        ).communicate(patch.encode())
+                self.trusted_system.Refresh(force=True)
+                six.assertCountEqual(
+                        self, 
+                        ['test patches'],
+                        [x.text for x in self.trusted_system.NextActions()])
 
     def testPatchRecurUpdateLastdone(self):
         """Update a recurring action's LASTDONE timestamp."""

@@ -505,8 +505,7 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
                                      stdin=subprocess.PIPE,
                                      stderr=subprocess.PIPE,
                                      stdout=subprocess.PIPE)
-                patch_result = p.communicate(patch.encode())
-                print('Patch (stdout, stderr): {}'.format(patch_result))
+                p.communicate(patch.encode())
             self.trusted_system.Refresh(force=True)
             six.assertCountEqual(
                     self,

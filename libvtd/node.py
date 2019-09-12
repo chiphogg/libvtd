@@ -774,7 +774,7 @@ class File(Node):
         self._file_name = file_name
         self._node_with_id = {}
 
-        try:
+        if file_name:
             # Read file contents and create a tree of Nodes from them.
             with open(file_name) as vtd_file:
                 # Parse the file, one line at a time, as follows.
@@ -800,10 +800,6 @@ class File(Node):
                         self._TrackIdNode(previous_node)
                     except KeyError:
                         self.bad_lines.append((line_num, raw_text))
-        except IOError:
-            print('Warning: file ''{}'' does not exist.'.format(file_name))
-        except TypeError:
-            print('Dummy file (no file name supplied).')
 
     @staticmethod
     def CreateNodeFromLine(line, line_num=1):

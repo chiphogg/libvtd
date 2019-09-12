@@ -6,6 +6,8 @@ from test import libvtd_test
 
 import libvtd.node
 
+from third_party import six
+
 
 class TestNode(unittest.TestCase):
     """Test various "node" types (Project, Next Action, Comment, etc.)"""
@@ -238,7 +240,7 @@ class TestFile(unittest.TestCase):
         # NextAction objects.
         self.assertEqual('Home relaxing @t:20', section.text)
         self.assertEqual(2, section.level)
-        self.assertItemsEqual(['home'], section.contexts)
+        six.assertCountEqual(self, ['home'], section.contexts)
         self.assertEqual(3, section.priority)
 
     def testParseNextAction(self):
@@ -247,7 +249,7 @@ class TestFile(unittest.TestCase):
             '@home <2013-07-05 22:30')
         self.assertEqual('NextAction', action.__class__.__name__)
         self.assertEqual('Read chapter 8', action.text)
-        self.assertItemsEqual(['read', 'home'], action.contexts)
+        six.assertCountEqual(self, ['read', 'home'], action.contexts)
         self.assertEqual(datetime.datetime(2013, 6, 28, 13),
                          action.visible_date)
         self.assertEqual(datetime.datetime(2013, 7, 5, 22, 30),

@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 from test import libvtd_test
+from third_party import six
 
 import libvtd.node
 import libvtd.trusted_system
@@ -32,14 +33,15 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         # With no contexts included, we should show all (non-excluded) actions.
         self.trusted_system.SetContexts(exclude=['waiting'])
         next_actions = self.trusted_system.NextActions()
-        self.assertItemsEqual(['Play with kids', 'Do some work'],
-                              [x.text for x in next_actions])
-
+        six.assertCountEqual(
+                self,
+                ['Play with kids', 'Do some work'],
+                [x.text for x in next_actions]) 
         # When we include a context, only show actions from that context.
         self.trusted_system.SetContexts(include=['home'], exclude=['waiting'])
         next_actions = self.trusted_system.NextActions()
-        self.assertItemsEqual(['Play with kids'],
-                              [x.text for x in next_actions])
+        six.assertCountEqual(
+                self, ['Play with kids'], [x.text for x in next_actions])
 
     def testInheritContext(self):
         self.addAnonymousFile([
@@ -56,19 +58,25 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         # Check @test actions
         self.trusted_system.SetContexts(include=['test'])
         next_actions = self.trusted_system.NextActions()
-        self.assertItemsEqual(['Top-level action', 'Inherited action'],
-                              [x.text for x in next_actions])
+        six.assertCountEqual(
+                self,
+                ['Top-level action', 'Inherited action'],
+                [x.text for x in next_actions])
         # Check @x actions
         self.trusted_system.SetContexts(include=['x'])
         next_actions = self.trusted_system.NextActions()
-        self.assertItemsEqual(["Action which should show up only under 'x'"],
-                              [x.text for x in next_actions])
+        six.assertCountEqual(
+                self,
+                ["Action which should show up only under 'x'"],
+                [x.text for x in next_actions])
 
         # Test ability to cancel all inheritance with '@!'.
         self.trusted_system.SetContexts(include=[], exclude=['test', 'x'])
         next_actions = self.trusted_system.NextActions()
-        self.assertItemsEqual(["Action which cancels all inheritance"],
-                              [x.text for x in next_actions])
+        six.assertCountEqual(
+                self,
+                ["Action which cancels all inheritance"],
+                [x.text for x in next_actions])
 
     def testInheritPriority(self):
         self.addAnonymousFile([
@@ -177,9 +185,10 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "@ Recurring action",
             "  EVERY day",
         ])
-        self.assertItemsEqual(
-            ['Regular action'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['Regular action'],
+                [x.text for x in self.trusted_system.NextActions()])
 
     def testExcludeWaiting(self):
         """Actions on the "waiting" list should not be shown."""
@@ -200,9 +209,10 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
             "@ Finished action (DONE)",
             "@ Unfinished action",
         ])
-        self.assertItemsEqual(
-            ['Unfinished action'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['Unfinished action'],
+                [x.text for x in self.trusted_system.NextActions()])
 
     def testRefresh(self):
         # First iteration of test file: just one action.
@@ -214,9 +224,10 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         self.trusted_system.AddFile(temp.name)
         self.assertLess(os.path.getmtime(temp.name),
                         self.trusted_system.last_refreshed)
-        self.assertItemsEqual(
-            ['first action'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['first action'],
+                [x.text for x in self.trusted_system.NextActions()])
 
         # Add text to the file, but make the system think it's already been
         # updated; this new action should not show up.
@@ -225,18 +236,20 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
         time_interval = 60  # Adjust timestamps by this (arbitrary) amount.
         self.trusted_system.last_refreshed += time_interval
         self.trusted_system.Refresh()
-        self.assertItemsEqual(
-            ['first action'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['first action'],
+                [x.text for x in self.trusted_system.NextActions()])
 
         # Refresh() should update the timestamp and find the new action.
         self.trusted_system.last_refreshed -= 2 * time_interval
         self.trusted_system.Refresh()
         self.assertLess(os.path.getmtime(temp.name),
                         self.trusted_system.last_refreshed)
-        self.assertItemsEqual(
-            ['first action', 'next action'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['first action', 'next action'],
+                [x.text for x in self.trusted_system.NextActions()])
 
         # Clean up after ourselves.
         os.unlink(temp.name)
@@ -257,10 +270,15 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
         now = datetime.datetime(2013, 9, 12, 21, 20)  # (Thursday.)
         recurs = self.trusted_system.RecurringActions(now)
         self.assertEqual(4, len(recurs))
-        self.assertItemsEqual(
-            ['Check calendar', 'Take out garbage', 'Scrub toilets',
-             'Fix obscure boundary bug'],
-            [x.text for x in recurs])
+        six.assertCountEqual(
+                self, 
+                [
+                    'Check calendar',
+                    'Take out garbage',
+                    'Scrub toilets',
+                    'Fix obscure boundary bug',
+                ],
+                [x.text for x in recurs])
 
         recur_1 = libvtd_test.FirstTextMatch(recurs, "^Check calendar$")
         self.assertEqual(datetime.datetime(2013, 9, 13), recur_1.due_date)
@@ -296,8 +314,8 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
         now = datetime.datetime(2014, 1, 3)
         recurs = self.trusted_system.RecurringActions(now)
         self.assertEqual(3, len(recurs))
-        self.assertItemsEqual(['Google', 'Facebook', 'Bank'],
-                              [x.text for x in recurs])
+        six.assertCountEqual(
+                self, ['Google', 'Facebook', 'Bank'], [x.text for x in recurs])
 
         recur_1 = libvtd_test.FirstTextMatch(recurs, "^Google$")
         self.assertEqual(libvtd.node.DateStates.due, recur_1.DateState(now))
@@ -323,8 +341,10 @@ class TestTrustedSystemWaiting(TestTrustedSystemBaseClass):
         waiting = self.trusted_system.Waiting(now)
 
         self.assertEqual(2, len(waiting))
-        self.assertItemsEqual(['Waiting for Godot', 'Get code review'],
-                              [x.text for x in waiting])
+        six.assertCountEqual(
+                self,
+                ['Waiting for Godot', 'Get code review'],
+                [x.text for x in waiting])
 
         waiting_2 = libvtd_test.FirstTextMatch(waiting, "^Get code review$")
         self.assertEqual(libvtd.node.DateStates.due, waiting_2.DateState(now))
@@ -345,8 +365,10 @@ class TestTrustedSystemInboxes(TestTrustedSystemBaseClass):
         self.trusted_system.SetContexts(exclude=['work'])
         inboxes = self.trusted_system.Inboxes(now)
         self.assertEqual(2, len(inboxes))
-        self.assertItemsEqual(['home inbox', 'Google Keep inbox'],
-                              [x.text for x in inboxes])
+        six.assertCountEqual(
+                self,
+                ['home inbox', 'Google Keep inbox'],
+                [x.text for x in inboxes])
 
         inbox_1 = libvtd_test.FirstTextMatch(inboxes, '^home inbox$')
         self.assertEqual(libvtd.node.DateStates.new, inbox_1.DateState(now))
@@ -367,8 +389,10 @@ class TestTrustedSystemAll(TestTrustedSystemBaseClass):
         now = datetime.datetime(2013, 9, 12, 9, 40)
         all = self.trusted_system.AllActions(now)
         self.assertEqual(3, len(all))
-        self.assertItemsEqual(['home inbox', 'Check calendar', 'Walk the dog'],
-                              [x.text for x in all])
+        six.assertCountEqual(
+                self,
+                ['home inbox', 'Check calendar', 'Walk the dog'],
+                [x.text for x in all])
 
 
 class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
@@ -391,9 +415,8 @@ class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
             ('dad', 1),
             ('mom', 1),
         ]
-        for (expected, actual) in itertools.izip_longest(
-                expected_contexts, self.trusted_system.ContextList()):
-            self.assertEqual(expected, actual)
+        actual_contexts = self.trusted_system.ContextList()
+        six.assertCountEqual(self, expected_contexts, actual_contexts)
 
     def testContextParsing(self):
         self.trusted_system.SetContexts(include=['phone', 'online', 'bug'])
@@ -406,9 +429,10 @@ class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
         # Double-@ sign should leave the word intact; single-@ sign should be
         # stripped out.  We implicitly check that the contexts get set by
         # checking that we see the actions we expect.
-        self.assertItemsEqual(
-            ['Phone mom', 'Pay rent', 'Fix bug: colons', 'Fix SEGV bug!!'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['Phone mom', 'Pay rent', 'Fix bug: colons', 'Fix SEGV bug!!'],
+                [x.text for x in self.trusted_system.NextActions()])
 
 
 class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
@@ -417,9 +441,10 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
         """Mark a NextAction as DONE."""
         with libvtd_test.TempInput(['@ test patches', '']) as file_name:
             self.trusted_system.AddFile(file_name)
-            self.assertItemsEqual(
-                ['test patches'],
-                [x.text for x in self.trusted_system.NextActions()])
+            six.assertCountEqual(
+                    self, 
+                    ['test patches'],
+                    [x.text for x in self.trusted_system.NextActions()])
             action = libvtd_test.FirstTextMatch(
                 self.trusted_system.NextActions(), "^test")
 
@@ -430,16 +455,17 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
                              shell=True, stdout=DEVNULL, stdin=subprocess.PIPE
                              ).communicate(patch)
             self.trusted_system.Refresh(force=True)
-            self.assertItemsEqual([], self.trusted_system.NextActions())
+            six.assertCountEqual(self, [], self.trusted_system.NextActions())
 
             # Apply the patch in reverse; the action should reappear.
             subprocess.Popen('patch -R {}'.format(action.file_name),
                              shell=True, stdout=DEVNULL,
                              stdin=subprocess.PIPE).communicate(patch)
             self.trusted_system.Refresh(force=True)
-            self.assertItemsEqual(
-                ['test patches'],
-                [x.text for x in self.trusted_system.NextActions()])
+            six.assertCountEqual(
+                    self, 
+                    ['test patches'],
+                    [x.text for x in self.trusted_system.NextActions()])
 
     def testPatchRecurUpdateLastdone(self):
         """Update a recurring action's LASTDONE timestamp."""
@@ -452,9 +478,10 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
             self.trusted_system.AddFile(file_name)
             now = datetime.datetime(2013, 9, 10, 8)
             recurs = self.trusted_system.RecurringActions(now)
-            self.assertItemsEqual(
-                ['New recurring\naction', 'Old recurring action'],
-                [x.text for x in recurs])
+            six.assertCountEqual(
+                    self, 
+                    ['New recurring\naction', 'Old recurring action'],
+                    [x.text for x in recurs])
             recur1 = libvtd_test.FirstTextMatch(recurs, "^New recurring\nacti")
             recur2 = libvtd_test.FirstTextMatch(recurs, "^Old recurring actio")
             self.assertEqual(libvtd.node.DateStates.new, recur1.DateState(now))
@@ -471,16 +498,18 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
                                      stdout=subprocess.PIPE)
                 print('Patch (stdout, stderr): {}'.format(p.communicate(patch)))
             self.trusted_system.Refresh(force=True)
-            self.assertItemsEqual([],
-                                  [x.text for x in
-                                   self.trusted_system.RecurringActions(now)])
+            six.assertCountEqual(
+                    self,
+                    [],
+                    [x.text for x in self.trusted_system.RecurringActions(now)])
 
             # Check that both are visible one week later.
             now = datetime.datetime(2013, 9, 17)
             recurs = self.trusted_system.RecurringActions(now)
-            self.assertItemsEqual(
-                ['New recurring\naction', 'Old recurring action'],
-                [x.text for x in recurs])
+            six.assertCountEqual(
+                    self, 
+                    ['New recurring\naction', 'Old recurring action'],
+                    [x.text for x in recurs])
             recur1 = libvtd_test.FirstTextMatch(recurs, "^New recurring\nacti")
             recur2 = libvtd_test.FirstTextMatch(recurs, "^Old recurring actio")
             self.assertEqual(libvtd.node.DateStates.late,
@@ -538,9 +567,10 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             "- Blocked project @after:firstAction",
             "  @ An action I should not see",
         ])
-        self.assertItemsEqual(
-            ['First action', 'Newly unblocked action', 'Blocker nonexistent'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['First action', 'Newly unblocked action', 'Blocker nonexistent'],
+                [x.text for x in self.trusted_system.NextActions()])
 
     def testOrderedProjects(self):
         self.addAnonymousFile([
@@ -556,9 +586,10 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             "    @ Action B",
             "    @ Action C",
         ])
-        self.assertItemsEqual(
-            ['First action', 'Newly-next Action'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['First action', 'Newly-next Action'],
+                [x.text for x in self.trusted_system.NextActions()])
 
     def testDoneProjectPruned(self):
         self.addAnonymousFile([
@@ -572,9 +603,10 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
             "  - Third subproject (WONTDO)",
             "    @ Something urgent but not important",
         ])
-        self.assertItemsEqual(
-            ['Another second-subproject task'],
-            [x.text for x in self.trusted_system.NextActions()])
+        six.assertCountEqual(
+                self, 
+                ['Another second-subproject task'],
+                [x.text for x in self.trusted_system.NextActions()])
 
     def testStubForProjectsWithoutNextActions(self):
         """Project without NextAction should prompt user."""
@@ -593,9 +625,10 @@ class TestTrustedSystemProjects(TestTrustedSystemBaseClass):
         ])
         self.trusted_system.SetContexts(exclude=['ignore'])
         next_actions = self.trusted_system.NextActions()
-        self.assertItemsEqual(
-            ['(Here it is!)', '{MISSING Next Action}', 'First action'],
-            [x.text for x in next_actions])
+        six.assertCountEqual(
+                self, 
+                ['(Here it is!)', '{MISSING Next Action}', 'First action'],
+                [x.text for x in next_actions])
 
         # Checking off the stub should really check off its parent.
         stub = libvtd_test.FirstTextMatch(next_actions, "MISSING")
@@ -641,8 +674,10 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
         ])
         projects = self.trusted_system.ProjectsWithoutNextActions()
         self.assertEqual(2, len(projects))
-        self.assertItemsEqual(['Ordered project.', 'Empty project.'],
-                              [x.text for x in projects])
+        six.assertCountEqual(
+                self,
+                ['Ordered project.', 'Empty project.'],
+                [x.text for x in projects])
 
     def testNextActionsWithoutContexts(self):
         """All next actions which lack a context.
@@ -665,5 +700,5 @@ class TestTrustedSystemParanoia(TestTrustedSystemBaseClass):
         ])
         next_actions = self.trusted_system.NextActionsWithoutContexts()
         self.assertEqual(1, len(next_actions))
-        self.assertItemsEqual(['Should show up'],
-                              [x.text for x in next_actions])
+        six.assertCountEqual(
+                self, ['Should show up'], [x.text for x in next_actions])

@@ -801,9 +801,9 @@ class File(Node):
                     except KeyError:
                         self.bad_lines.append((line_num, raw_text))
         except IOError:
-            print 'Warning: file ''{}'' does not exist.'.format(file_name)
+            print('Warning: file ''{}'' does not exist.'.format(file_name))
         except TypeError:
-            print 'Dummy file (no file name supplied).'
+            print('Dummy file (no file name supplied).')
 
     @staticmethod
     def CreateNodeFromLine(line, line_num=1):

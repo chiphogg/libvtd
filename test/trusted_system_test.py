@@ -541,17 +541,19 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
             actions = self.trusted_system.NextActions()
             self.assertEqual(1, len(actions))
             self.assertFalse(actions[0].recurring)
-            self.assertRegexpMatches(
-                actions[0].Patch(libvtd.node.Actions.DefaultCheckoff, now),
-                r'\(DONE 2013-10-31 17:30\)')
+            six.assertRegex(
+                    self,
+                    actions[0].Patch(libvtd.node.Actions.DefaultCheckoff, now),
+                    r'\(DONE 2013-10-31 17:30\)')
 
             # Recurring action should get its LASTDONE timestamp updated.
             actions = self.trusted_system.RecurringActions()
             self.assertEqual(1, len(actions))
             self.assertTrue(actions[0].recurring)
-            self.assertRegexpMatches(
-                actions[0].Patch(libvtd.node.Actions.DefaultCheckoff, now),
-                r'\(LASTDONE 2013-10-31 17:30\)')
+            six.assertRegex(
+                    self, 
+                    actions[0].Patch(libvtd.node.Actions.DefaultCheckoff, now),
+                    r'\(LASTDONE 2013-10-31 17:30\)')
 
 
 class TestTrustedSystemProjects(TestTrustedSystemBaseClass):

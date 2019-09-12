@@ -9,7 +9,7 @@ import libvtd.trusted_system
 
 @contextlib.contextmanager
 def TempInput(data):
-    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp = tempfile.NamedTemporaryFile('w', delete=False)
     temp.write('\n'.join(data))
     temp.close()
     yield temp.name

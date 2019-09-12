@@ -206,7 +206,7 @@ class TestTrustedSystemNextActions(TestTrustedSystemBaseClass):
 
     def testRefresh(self):
         # First iteration of test file: just one action.
-        temp = tempfile.NamedTemporaryFile(delete=False)
+        temp = tempfile.NamedTemporaryFile('w', delete=False)
         temp.write('\n'.join([
             "@ first action"
         ]))

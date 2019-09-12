@@ -469,7 +469,7 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
                                      stdin=subprocess.PIPE,
                                      stderr=subprocess.PIPE,
                                      stdout=subprocess.PIPE)
-                print 'Patch (stdout, stderr): {}'.format(p.communicate(patch))
+                print('Patch (stdout, stderr): {}'.format(p.communicate(patch)))
             self.trusted_system.Refresh(force=True)
             self.assertItemsEqual([],
                                   [x.text for x in

@@ -2,7 +2,7 @@ import copy
 import datetime
 import unittest
 
-import libvtd_test
+from test import libvtd_test
 
 import libvtd.node
 

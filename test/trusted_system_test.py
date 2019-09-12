@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-import libvtd_test
+from test import libvtd_test
 
 import libvtd.node
 import libvtd.trusted_system

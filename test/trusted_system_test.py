@@ -453,14 +453,14 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
             DEVNULL = open('/dev/null', 'w')
             subprocess.Popen('patch {}'.format(action.file_name),
                              shell=True, stdout=DEVNULL, stdin=subprocess.PIPE
-                             ).communicate(patch)
+                             ).communicate(patch.encode())
             self.trusted_system.Refresh(force=True)
             six.assertCountEqual(self, [], self.trusted_system.NextActions())
 
             # Apply the patch in reverse; the action should reappear.
             subprocess.Popen('patch -R {}'.format(action.file_name),
                              shell=True, stdout=DEVNULL,
-                             stdin=subprocess.PIPE).communicate(patch)
+                             stdin=subprocess.PIPE).communicate(patch.encode())
             self.trusted_system.Refresh(force=True)
             six.assertCountEqual(
                     self, 
@@ -496,7 +496,8 @@ class TestTrustedSystemPatches(TestTrustedSystemBaseClass):
                                      stdin=subprocess.PIPE,
                                      stderr=subprocess.PIPE,
                                      stdout=subprocess.PIPE)
-                print('Patch (stdout, stderr): {}'.format(p.communicate(patch)))
+                patch_result = p.communicate(patch.encode())
+                print('Patch (stdout, stderr): {}'.format(patch_result))
             self.trusted_system.Refresh(force=True)
             six.assertCountEqual(
                     self,

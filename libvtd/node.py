@@ -33,9 +33,9 @@ def PreviousTime(date_and_time, time_string=None, due=True):
     except:
         time = datetime.time()
     new_datetime = datetime.datetime.combine(date_and_time.date(), time)
-    if new_datetime >= date_and_time:
+    if new_datetime > date_and_time:
         new_datetime -= datetime.timedelta(days=1)
-    assert new_datetime < date_and_time
+    assert new_datetime <= date_and_time
     return new_datetime
 
 

@@ -582,3 +582,24 @@ class TestRecurringActions(unittest.TestCase):
         self.assertEqual(
                 libvtd.node.DateStates.late,
                 recur.DateState(datetime.datetime(2015, 2, 6, 17, 1)))
+
+    def testDailyIsDoneIfLastdoneAtStartOfInterval(self):
+        """Guards against chiphogg/vim-vtd#17."""
+        recur = libvtd.node.NextAction()
+        self.assertTrue(recur.AbsorbText(
+            '@ Run EVERY day [09:00 - 17:00] (LASTDONE 2015-01-30 09:00)'))
+        self.assertEqual(
+                libvtd.node.DateStates.invisible,
+                recur.DateState(datetime.datetime(2015, 1, 30, 9, 0)))
+        self.assertEqual(
+                libvtd.node.DateStates.invisible,
+                recur.DateState(datetime.datetime(2015, 1, 31, 8, 59)))
+        self.assertEqual(
+                libvtd.node.DateStates.due,
+                recur.DateState(datetime.datetime(2015, 1, 31, 9, 0)))
+        self.assertEqual(
+                libvtd.node.DateStates.due,
+                recur.DateState(datetime.datetime(2015, 1, 31, 17, 0)))
+        self.assertEqual(
+                libvtd.node.DateStates.late,
+                recur.DateState(datetime.datetime(2015, 1, 31, 17, 1)))

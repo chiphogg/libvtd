@@ -265,7 +265,7 @@ class TestTrustedSystemRecurringActions(TestTrustedSystemBaseClass):
             "@ Scrub toilets EVERY 4-6 weeks",
             "  (LASTDONE 2013-08-16 21:00)",  # (Friday.)
             "@ Fix obscure boundary bug EVERY day [09:00]",
-            "  (LASTDONE 2013-09-12 09:00)",
+            "  (LASTDONE 2013-09-11 09:00)",
         ])
         now = datetime.datetime(2013, 9, 12, 21, 20)  # (Thursday.)
         recurs = self.trusted_system.RecurringActions(now)

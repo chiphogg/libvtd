@@ -70,7 +70,7 @@ def PreviousWeekDay(date_and_time, weekday_string=None, due=True):
             datetime.timedelta(days=-((date_and_time.weekday() -
                                        weekday_and_time.weekday()) % 7)),
             weekday_and_time.time())
-    assert new_datetime < date_and_time
+    assert new_datetime <= date_and_time
     return new_datetime
 
 

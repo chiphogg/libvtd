@@ -394,6 +394,12 @@ class TestTrustedSystemAll(TestTrustedSystemBaseClass):
                 ['home inbox', 'Check calendar', 'Walk the dog'],
                 [x.text for x in all])
 
+    def testAllIncludesMissingNextActions(self):
+        self.addAnonymousFile(["# Ordered project"])
+        all = self.trusted_system.AllActions()
+        six.assertCountEqual(
+                self, ['{MISSING Next Action}'], [x.text for x in all])
+
 
 class TestTrustedSystemContexts(TestTrustedSystemBaseClass):
     def testListContexts(self):

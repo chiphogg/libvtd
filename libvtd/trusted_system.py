@@ -146,12 +146,17 @@ class TrustedSystem:
                          self._VisibleNextAction(x, now)
                          and self._OkContexts(x))
 
+        return next_actions + self._StubsForMissingActions(now)
+
+    def _StubsForMissingActions(self, now=None):
+        stubs = []
         for project in self.ProjectsWithoutNextActions():
             vis = (project.DateState(now) != libvtd.node.DateStates.invisible
                    and not self._Blocked(project))
             if vis and self._OkContexts(project):
-                next_actions.append(libvtd.node.NeedsNextActionStub(project))
-        return next_actions
+                stubs.append(libvtd.node.NeedsNextActionStub(project))
+        return stubs
+
 
     def RecurringActions(self, now=None):
         """A list of recurring actions visible given the current contexts."""
@@ -197,7 +202,7 @@ class TrustedSystem:
                          matcher=lambda x: (self._VisibleAction(x, now)
                                             and self._OkContexts(x)
                                             and not x.waiting))
-        return all_actions
+        return all_actions + self._StubsForMissingActions(now)
 
     def Waiting(self, now=None):
         """The GTD 'Waiting For' list."""

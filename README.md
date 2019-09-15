@@ -1,4 +1,4 @@
-# libvtd
+# libvtd [![Build Status](https://travis-ci.org/chiphogg/libvtd.svg?branch=master)](https://travis-ci.org/chiphogg/libvtd)
 
 Python library for a GTD Trusted System.
 

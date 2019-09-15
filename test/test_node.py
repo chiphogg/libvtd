@@ -555,12 +555,6 @@ class TestRecurringActions(unittest.TestCase):
         self.assertEqual(
                 libvtd.node.DateStates.due,
                 recur.DateState(datetime.datetime(2019, 10, 1, 9, 0)))
-        self.assertEqual(
-                libvtd.node.DateStates.due,
-                recur.DateState(datetime.datetime(2019, 10, 3, 23, 59)))
-        self.assertEqual(
-                libvtd.node.DateStates.late,
-                recur.DateState(datetime.datetime(2019, 10, 4, 0, 0)))
 
     def testWeeklyIsDoneIfLastdoneAtStartOfInterval(self):
         """Guards against chiphogg/vim-vtd#17."""
@@ -576,12 +570,6 @@ class TestRecurringActions(unittest.TestCase):
         self.assertEqual(
                 libvtd.node.DateStates.due,
                 recur.DateState(datetime.datetime(2015, 2, 6, 9, 0)))
-        self.assertEqual(
-                libvtd.node.DateStates.due,
-                recur.DateState(datetime.datetime(2015, 2, 6, 17, 0)))
-        self.assertEqual(
-                libvtd.node.DateStates.late,
-                recur.DateState(datetime.datetime(2015, 2, 6, 17, 1)))
 
     def testDailyIsDoneIfLastdoneAtStartOfInterval(self):
         """Guards against chiphogg/vim-vtd#17."""
@@ -597,9 +585,3 @@ class TestRecurringActions(unittest.TestCase):
         self.assertEqual(
                 libvtd.node.DateStates.due,
                 recur.DateState(datetime.datetime(2015, 1, 31, 9, 0)))
-        self.assertEqual(
-                libvtd.node.DateStates.due,
-                recur.DateState(datetime.datetime(2015, 1, 31, 17, 0)))
-        self.assertEqual(
-                libvtd.node.DateStates.late,
-                recur.DateState(datetime.datetime(2015, 1, 31, 17, 1)))
